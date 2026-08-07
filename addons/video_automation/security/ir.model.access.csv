@@ -1,0 +1,23 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_video_storage_user,video.storage user,model_video_storage,group_video_automation_user,1,0,0,0
+access_video_storage_manager,video.storage manager,model_video_storage,group_video_automation_manager,1,1,1,1
+access_tiktok_app_user,tiktok.app user,model_tiktok_app,group_video_automation_user,1,0,0,0
+access_tiktok_app_manager,tiktok.app manager,model_tiktok_app,group_video_automation_manager,1,1,1,1
+access_video_library_user,video.library user,model_video_library,group_video_automation_user,1,1,1,0
+access_video_library_manager,video.library manager,model_video_library,group_video_automation_manager,1,1,1,1
+access_audio_library_user,audio.library user,model_audio_library,group_video_automation_user,1,1,1,0
+access_audio_library_manager,audio.library manager,model_audio_library,group_video_automation_manager,1,1,1,1
+access_tiktok_account_user,tiktok.account user,model_tiktok_account,group_video_automation_user,1,1,1,0
+access_tiktok_account_manager,tiktok.account manager,model_tiktok_account,group_video_automation_manager,1,1,1,1
+access_tiktok_schedule_rule_user,tiktok.schedule.rule user,model_tiktok_schedule_rule,group_video_automation_user,1,1,1,0
+access_tiktok_schedule_rule_manager,tiktok.schedule.rule manager,model_tiktok_schedule_rule,group_video_automation_manager,1,1,1,1
+access_tiktok_schedule_rule_time_user,tiktok.schedule.rule.time user,model_tiktok_schedule_rule_time,group_video_automation_user,1,1,1,0
+access_tiktok_schedule_rule_time_manager,tiktok.schedule.rule.time manager,model_tiktok_schedule_rule_time,group_video_automation_manager,1,1,1,1
+access_tiktok_publish_queue_user,tiktok.publish.queue user,model_tiktok_publish_queue,group_video_automation_user,1,1,0,0
+access_tiktok_publish_queue_manager,tiktok.publish.queue manager,model_tiktok_publish_queue,group_video_automation_manager,1,1,1,1
+access_tiktok_upload_history_user,tiktok.upload.history user,model_tiktok_upload_history,group_video_automation_user,1,0,0,0
+access_tiktok_upload_history_manager,tiktok.upload.history manager,model_tiktok_upload_history,group_video_automation_manager,1,1,1,1
+access_video_extract_audio_wizard_user,video.extract.audio.wizard user,model_video_extract_audio_wizard,group_video_automation_user,1,1,1,1
+access_video_extract_audio_wizard_manager,video.extract.audio.wizard manager,model_video_extract_audio_wizard,group_video_automation_manager,1,1,1,1
+access_video_generate_wizard_user,video.generate.wizard user,model_video_generate_wizard,group_video_automation_user,1,1,1,1
+access_video_generate_wizard_manager,video.generate.wizard manager,model_video_generate_wizard,group_video_automation_manager,1,1,1,1

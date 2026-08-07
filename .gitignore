@@ -1,0 +1,10 @@
+.env
+*.pyc
+__pycache__/
+.idea/
+.vscode/
+tmp/*
+!tmp/.gitkeep
+*.log
+odoo-web-data/
+.DS_Store

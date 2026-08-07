@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_video_automation_root"
+              name="Video Automation"
+              sequence="40"
+              groups="video_automation.group_video_automation_user"/>
+
+    <menuitem id="menu_va_library"
+              name="Library"
+              parent="menu_video_automation_root"
+              sequence="10"/>
+
+    <menuitem id="menu_va_video_library"
+              name="Videos"
+              parent="menu_va_library"
+              action="action_video_library"
+              sequence="10"/>
+
+    <menuitem id="menu_va_video_generate"
+              name="Video Generate"
+              parent="menu_va_library"
+              action="action_video_generate"
+              sequence="15"/>
+
+    <menuitem id="menu_va_audio_library"
+              name="Audio"
+              parent="menu_va_library"
+              action="action_audio_library"
+              sequence="20"/>
+
+    <menuitem id="menu_va_tiktok"
+              name="TikTok"
+              parent="menu_video_automation_root"
+              sequence="30"/>
+
+    <menuitem id="menu_va_tiktok_accounts"
+              name="Accounts"
+              parent="menu_va_tiktok"
+              action="action_tiktok_account"
+              sequence="10"/>
+
+    <menuitem id="menu_va_schedule_rules"
+              name="Schedule Rules"
+              parent="menu_va_tiktok"
+              action="action_tiktok_schedule_rule"
+              sequence="20"/>
+
+    <menuitem id="menu_va_publish_queue"
+              name="Publish Queue"
+              parent="menu_va_tiktok"
+              action="action_tiktok_publish_queue"
+              sequence="30"/>
+
+    <menuitem id="menu_va_upload_history"
+              name="Upload History"
+              parent="menu_va_tiktok"
+              action="action_tiktok_upload_history"
+              sequence="40"/>
+
+    <menuitem id="menu_va_config"
+              name="Configuration"
+              parent="menu_video_automation_root"
+              sequence="90"
+              groups="video_automation.group_video_automation_manager"/>
+
+    <menuitem id="menu_va_storage"
+              name="R2 Storage"
+              parent="menu_va_config"
+              action="action_video_storage"
+              sequence="10"/>
+
+    <menuitem id="menu_va_tiktok_apps"
+              name="TikTok Apps"
+              parent="menu_va_config"
+              action="action_tiktok_app"
+              sequence="20"/>
+</odoo>

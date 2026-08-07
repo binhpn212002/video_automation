@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tiktok_schedule_rule_time_tree" model="ir.ui.view">
+        <field name="name">tiktok.schedule.rule.time.tree</field>
+        <field name="model">tiktok.schedule.rule.time</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="hour"/>
+                <field name="minute"/>
+                <field name="name"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_tiktok_schedule_rule_tree" model="ir.ui.view">
+        <field name="name">tiktok.schedule.rule.tree</field>
+        <field name="model">tiktok.schedule.rule</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="tiktok_account_id"/>
+                <field name="allow_republish"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_tiktok_schedule_rule_form" model="ir.ui.view">
+        <field name="name">tiktok.schedule.rule.form</field>
+        <field name="model">tiktok.schedule.rule</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="tiktok_account_id"/>
+                            <field name="timezone"/>
+                            <field name="allow_republish"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="caption_template"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Upload Times">
+                            <field name="upload_time_ids">
+                                <tree editable="bottom">
+                                    <field name="hour"/>
+                                    <field name="minute"/>
+                                    <field name="name"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_tiktok_schedule_rule" model="ir.actions.act_window">
+        <field name="name">Schedule Rules</field>
+        <field name="res_model">tiktok.schedule.rule</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

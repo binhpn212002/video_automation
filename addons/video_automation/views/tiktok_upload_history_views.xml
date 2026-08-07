@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tiktok_upload_history_tree" model="ir.ui.view">
+        <field name="name">tiktok.upload.history.tree</field>
+        <field name="model">tiktok.upload.history</field>
+        <field name="arch" type="xml">
+            <tree create="0" edit="0">
+                <field name="upload_time"/>
+                <field name="video_id"/>
+                <field name="tiktok_account_id"/>
+                <field name="status"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_tiktok_upload_history_form" model="ir.ui.view">
+        <field name="name">tiktok.upload.history.form</field>
+        <field name="model">tiktok.upload.history</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0">
+                <sheet>
+                    <group>
+                        <field name="upload_time"/>
+                        <field name="video_id"/>
+                        <field name="tiktok_account_id"/>
+                        <field name="publish_queue_id"/>
+                        <field name="status"/>
+                        <field name="response"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_tiktok_upload_history" model="ir.actions.act_window">
+        <field name="name">Upload History</field>
+        <field name="res_model">tiktok.upload.history</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

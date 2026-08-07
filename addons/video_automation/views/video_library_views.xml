@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_video_library_tree" model="ir.ui.view">
+        <field name="name">video.library.tree</field>
+        <field name="model">video.library</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="state"/>
+                <field name="generated"/>
+                <field name="duration"/>
+                <field name="scheduled_count"/>
+                <field name="published_count"/>
+                <field name="allow_republish"/>
+                <field name="create_date"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_video_library_form" model="ir.ui.view">
+        <field name="name">video.library.form</field>
+        <field name="model">video.library</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_upload_to_r2" type="object" string="Upload to R2"
+                            class="btn-primary"
+                            invisible="not upload_file"/>
+                    <button name="action_gen_video" type="object" string="Generate Video"
+                            class="btn-primary"
+                            invisible="not storage_path"
+                            title="Chọn nhạc và tạo video output"/>
+                    <button name="action_extract_audio" type="object" string="Extract Audio"
+                            class="btn-secondary"
+                            invisible="not storage_path"/>
+                    <button name="action_open_cdn_url" type="object" string="Xem video"
+                            class="btn-secondary"
+                            invisible="not cdn_url"/>
+                    <button name="action_rebuild_cdn_url" type="object" string="Rebuild CDN URL"
+                            invisible="not storage_path"/>
+                    <button name="action_mark_available" type="object" string="Mark Available"
+                            invisible="state == 'available'"/>
+                    <field name="state" widget="statusbar"
+                            statusbar_visible="draft,uploaded,processing,available"/>
+                </header>
+                <sheet>
+                    <group string="Import from device">
+                        <group>
+                            <field name="upload_filename" invisible="1"/>
+                            <field name="upload_file" filename="upload_filename"
+                                     string="Chọn video"/>
+                        </group>
+                        <group>
+                            <div class="text-muted" colspan="2">
+                                Chọn file từ máy → bấm Upload to R2.
+                                Sau đó Gen Video (chọn nhạc) để tạo video output.
+                            </div>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="filename"/>
+                            <field name="storage_id"/>
+                            <field name="generated"/>
+                            <field name="audio_id"/>
+                            <field name="allow_republish"/>
+                        </group>
+                        <group>
+                            <field name="storage_path" readonly="1"/>
+                            <field name="original_storage_path" readonly="1"/>
+                            <field name="cdn_url" widget="url" readonly="1"/>
+                            <field name="thumbnail_url" widget="url"/>
+                            <field name="scheduled_count"/>
+                            <field name="published_count"/>
+                        </group>
+                    </group>
+                    <group string="Xem trước" invisible="not cdn_url">
+                        <field name="preview_html" nolabel="1" colspan="2"/>
+                    </group>
+                    <group string="Metadata">
+                        <field name="duration" readonly="1"/>
+                        <field name="width" readonly="1"/>
+                        <field name="height" readonly="1"/>
+                        <field name="fps" readonly="1"/>
+                        <field name="bitrate" readonly="1"/>
+                        <field name="file_size" readonly="1"/>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_video_library_search" model="ir.ui.view">
+        <field name="name">video.library.search</field>
+        <field name="model">video.library</field>
+        <field name="arch" type="xml">
+            <search string="Search Videos">
+                <field name="name"/>
+                <field name="filename"/>
+                <field name="storage_id"/>
+                <field name="state"/>
+                <separator/>
+                <filter name="filter_generated" string="Generated"
+                        domain="[('generated', '=', True)]"/>
+                <filter name="filter_not_generated" string="Not Generated"
+                        domain="[('generated', '=', False)]"/>
+                <separator/>
+                <filter name="filter_available" string="Available"
+                        domain="[('state', '=', 'available')]"/>
+                <filter name="filter_uploaded" string="Uploaded"
+                        domain="[('state', '=', 'uploaded')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="groupby_generated" string="Generated"
+                            context="{'group_by': 'generated'}"/>
+                    <filter name="groupby_state" string="Status"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="groupby_storage" string="Storage"
+                            context="{'group_by': 'storage_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_video_library" model="ir.actions.act_window">
+        <field name="name">Video Library</field>
+        <field name="res_model">video.library</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_video_library_search"/>
+    </record>
+
+    <record id="action_video_generate" model="ir.actions.act_window">
+        <field name="name">Video Generate</field>
+        <field name="res_model">video.library</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('generated', '=', True)]</field>
+        <field name="context">{'search_default_filter_generated': 1}</field>
+        <field name="search_view_id" ref="view_video_library_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Chưa có video generate.
+            </p>
+            <p>
+                Mở một video trong Library → bấm <b>Generate Video</b> để tạo video output.
+            </p>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: video_automation_db
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  odoo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video_automation_odoo
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8069:8069"
+      - "8072:8072"
+    env_file:
+      - .env
+    environment:
+      HOST: db
+      USER: odoo
+      PASSWORD: odoo
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./addons:/mnt/extra-addons
+      - ./tmp:/tmp/video_work
+    command:
+      [
+        "odoo",
+        "--db_host=db",
+        "--db_user=odoo",
+        "--db_password=odoo",
+        "--addons-path=/mnt/extra-addons,/usr/lib/python3/dist-packages/odoo/addons",
+      ]
+
+volumes:
+  odoo-db-data:
+  odoo-web-data:

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tiktok_publish_queue_tree" model="ir.ui.view">
+        <field name="name">tiktok.publish.queue.tree</field>
+        <field name="model">tiktok.publish.queue</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="scheduled_time"/>
+                <field name="slot_time"/>
+                <field name="video_id"/>
+                <field name="tiktok_account_id"/>
+                <field name="state"/>
+                <field name="retry_count"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_tiktok_publish_queue_form" model="ir.ui.view">
+        <field name="name">tiktok.publish.queue.form</field>
+        <field name="model">tiktok.publish.queue</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_publish_now" type="object" string="Publish Now"
+                            invisible="state in ('uploading', 'success')"/>
+                    <field name="state" widget="statusbar"
+                            statusbar_visible="pending,uploading,success,failed"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="video_id"/>
+                            <field name="tiktok_account_id"/>
+                            <field name="schedule_rule_id"/>
+                            <field name="privacy_level"/>
+                        </group>
+                        <group>
+                            <field name="schedule_date"/>
+                            <field name="slot_time"/>
+                            <field name="scheduled_time"/>
+                            <field name="retry_count"/>
+                            <field name="tiktok_publish_id"/>
+                            <field name="share_url" widget="url"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="caption"/>
+                        <field name="error_message"/>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_tiktok_publish_queue" model="ir.actions.act_window">
+        <field name="name">Publish Queue</field>
+        <field name="res_model">tiktok.publish.queue</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_video_storage_tree" model="ir.ui.view">
+        <field name="name">video.storage.tree</field>
+        <field name="model">video.storage</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="bucket_name"/>
+                <field name="cdn_domain"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_video_storage_form" model="ir.ui.view">
+        <field name="name">video.storage.form</field>
+        <field name="model">video.storage</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="account_id"/>
+                            <field name="bucket_name"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="endpoint"
+                                    placeholder="https://&lt;account_id&gt;.r2.cloudflarestorage.com"/>
+                            <field name="cdn_domain"
+                                    placeholder="https://pub-xxxx.r2.dev"/>
+                            <field name="access_key_id" password="True"/>
+                            <field name="secret_key" password="True"/>
+                            <div class="text-muted" colspan="2">
+                                CDN URL = CDN Domain + / + path
+                                Video: https://pub-xxxx.r2.dev/video/v_3_....mp4
+                                Audio: https://pub-xxxx.r2.dev/audio/a_....mp3
+                                Lưu trong bucket dưới folder video/ và audio/.
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_video_storage" model="ir.actions.act_window">
+        <field name="name">R2 Storage</field>
+        <field name="res_model">video.storage</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

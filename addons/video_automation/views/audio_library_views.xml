@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_audio_library_tree" model="ir.ui.view">
+        <field name="name">audio.library.tree</field>
+        <field name="model">audio.library</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="filename"/>
+                <field name="duration"/>
+                <field name="cdn_url"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_audio_library_form" model="ir.ui.view">
+        <field name="name">audio.library.form</field>
+        <field name="model">audio.library</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_upload_to_r2" type="object" string="Upload to R2"
+                            class="btn-primary"
+                            invisible="not upload_file"/>
+                </header>
+                <sheet>
+                    <group string="Import from device">
+                        <group>
+                            <field name="upload_filename" invisible="1"/>
+                            <field name="upload_file" filename="upload_filename"
+                                     string="Chọn audio"/>
+                        </group>
+                        <group>
+                            <div class="text-muted" colspan="2">
+                                Chọn file từ máy → bấm Upload to R2.
+                                File tạm sẽ bị xóa sau khi lên Cloudflare R2.
+                            </div>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="filename" readonly="1"/>
+                            <field name="storage_id"/>
+                            <field name="source_video_id" readonly="1"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="storage_path" readonly="1"/>
+                            <field name="cdn_url" widget="url" readonly="1"/>
+                            <field name="duration" readonly="1"/>
+                            <field name="file_size" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_audio_library" model="ir.actions.act_window">
+        <field name="name">Audio Library</field>
+        <field name="res_model">audio.library</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

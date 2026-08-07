@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tiktok_account_tree" model="ir.ui.view">
+        <field name="name">tiktok.account.tree</field>
+        <field name="model">tiktok.account</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="name"/>
+                <field name="username"/>
+                <field name="bucket_id"/>
+                <field name="auth_state"/>
+                <field name="access_token"
+                         groups="video_automation.group_video_automation_manager"
+                         password="True"/>
+                <field name="refresh_token"
+                         groups="video_automation.group_video_automation_manager"
+                         password="True"/>
+                <field name="token_expires_at"/>
+                <field name="timezone"/>
+                <field name="active"/>
+                <button name="action_apply_manual_tokens" type="object"
+                        string="Apply tokens" title="Đánh dấu Connected sau khi sửa token"
+                        groups="video_automation.group_video_automation_manager"
+                        icon="fa-check"/>
+                <button name="refresh_tokens" type="object"
+                        string="Refresh" title="Refresh token qua API"
+                        groups="video_automation.group_video_automation_manager"
+                        icon="fa-refresh"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_tiktok_account_form" model="ir.ui.view">
+        <field name="name">tiktok.account.form</field>
+        <field name="model">tiktok.account</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_connect_oauth" type="object" string="Connect TikTok"
+                            class="btn-primary"/>
+                    <button name="action_apply_manual_tokens" type="object"
+                            string="Apply Manual Tokens"
+                            class="btn-secondary"
+                            groups="video_automation.group_video_automation_manager"/>
+                    <button name="refresh_tokens" type="object" string="Refresh Token"
+                            invisible="auth_state == 'disconnected'"/>
+                    <field name="auth_state" widget="statusbar"
+                            statusbar_visible="disconnected,connected,expired"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="tiktok_app_id"/>
+                            <field name="bucket_id"/>
+                            <field name="username"/>
+                            <field name="profile_url" widget="url"/>
+                            <field name="timezone"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Tokens (có thể sửa thủ công)"
+                               groups="video_automation.group_video_automation_manager">
+                            <field name="open_id"/>
+                            <field name="access_token" password="True"/>
+                            <field name="refresh_token" password="True"/>
+                            <field name="token_expires_at"/>
+                            <field name="scopes"/>
+                            <field name="oauth_state" groups="base.group_no_one"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_tiktok_account" model="ir.actions.act_window">
+        <field name="name">TikTok Accounts</field>
+        <field name="res_model">tiktok.account</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

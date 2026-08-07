@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tiktok_app_tree" model="ir.ui.view">
+        <field name="name">tiktok.app.tree</field>
+        <field name="model">tiktok.app</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="environment"/>
+                <field name="redirect_uri"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_tiktok_app_form" model="ir.ui.view">
+        <field name="name">tiktok.app.form</field>
+        <field name="model">tiktok.app</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="environment"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="client_key" password="True"/>
+                            <field name="client_secret" password="True"/>
+                            <field name="redirect_uri"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_tiktok_app" model="ir.actions.act_window">
+        <field name="name">TikTok Apps</field>
+        <field name="res_model">tiktok.app</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>
