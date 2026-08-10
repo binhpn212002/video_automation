@@ -21,18 +21,23 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_publish_now" type="object" string="Publish Now"
+                    <button name="action_publish_now" type="object" string="Send to TikTok Inbox"
+                            help="Upload video as draft to TikTok Inbox (user Edit → Post in app)"
                             invisible="state in ('uploading', 'success')"/>
                     <field name="state" widget="statusbar"
                             statusbar_visible="pending,uploading,success,failed"/>
                 </header>
                 <sheet>
+                    <div class="alert alert-info" role="alert"
+                         invisible="state != 'success'">
+                        Video đã vào TikTok Inbox. Mở app TikTok → Inbox → Edit → Post.
+                    </div>
                     <group>
                         <group>
                             <field name="video_id"/>
                             <field name="tiktok_account_id"/>
                             <field name="schedule_rule_id"/>
-                            <field name="privacy_level"/>
+                            <field name="privacy_level" invisible="1"/>
                         </group>
                         <group>
                             <field name="schedule_date"/>
@@ -40,11 +45,12 @@
                             <field name="scheduled_time"/>
                             <field name="retry_count"/>
                             <field name="tiktok_publish_id"/>
-                            <field name="share_url" widget="url"/>
+                            <field name="share_url" widget="url" invisible="1"/>
                         </group>
                     </group>
                     <group>
-                        <field name="caption"/>
+                        <field name="caption"
+                                 placeholder="Gợi ý caption — user chỉnh khi post từ Inbox TikTok"/>
                         <field name="error_message"/>
                     </group>
                 </sheet>

@@ -4,20 +4,25 @@
         <field name="name">tiktok.account.tree</field>
         <field name="model">tiktok.account</field>
         <field name="arch" type="xml">
-            <tree editable="bottom">
+            <tree>
                 <field name="name"/>
                 <field name="username"/>
                 <field name="bucket_id"/>
                 <field name="auth_state"/>
+                <field name="open_id" optional="hide"/>
                 <field name="access_token"
                          groups="video_automation.group_video_automation_manager"
-                         password="True"/>
+                         password="True" optional="show"/>
                 <field name="refresh_token"
                          groups="video_automation.group_video_automation_manager"
-                         password="True"/>
+                         password="True" optional="show"/>
                 <field name="token_expires_at"/>
-                <field name="timezone"/>
+                <field name="timezone" optional="hide"/>
                 <field name="active"/>
+                <button name="action_login_tiktok" type="object"
+                        string="Login TikTok" title="OAuth Login để lấy token"
+                        class="btn-primary"
+                        icon="fa-sign-in"/>
                 <button name="action_apply_manual_tokens" type="object"
                         string="Apply tokens" title="Đánh dấu Connected sau khi sửa token"
                         groups="video_automation.group_video_automation_manager"
@@ -36,8 +41,9 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_connect_oauth" type="object" string="Connect TikTok"
-                            class="btn-primary"/>
+                    <button name="action_login_tiktok" type="object" string="Login TikTok"
+                            class="btn-primary"
+                            title="Mở TikTok OAuth để lấy access/refresh token"/>
                     <button name="action_apply_manual_tokens" type="object"
                             string="Apply Manual Tokens"
                             class="btn-secondary"
@@ -48,6 +54,14 @@
                             statusbar_visible="disconnected,connected,expired"/>
                 </header>
                 <sheet>
+                    <div class="alert alert-info" role="alert">
+                        <b>Login TikTok:</b> cấu hình TikTok App (client_key, secret, redirect_uri)
+                        → lưu account → bấm <b>Login TikTok</b> → authorize trên TikTok
+                        → token tự lưu vào form này.
+                        Redirect URI mặc định:
+                        <code>http://localhost:8069/tiktok/oauth/callback</code>
+                        (phải đăng ký đúng trên TikTok Developer Portal / Sandbox).
+                    </div>
                     <group>
                         <group>
                             <field name="name"/>
@@ -58,7 +72,7 @@
                             <field name="timezone"/>
                             <field name="active"/>
                         </group>
-                        <group string="Tokens (có thể sửa thủ công)"
+                        <group string="Tokens (sau Login hoặc nhập tay)"
                                groups="video_automation.group_video_automation_manager">
                             <field name="open_id"/>
                             <field name="access_token" password="True"/>

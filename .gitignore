@@ -8,3 +8,4 @@ tmp/*
 *.log
 odoo-web-data/
 .DS_Store
+index.js

@@ -19,6 +19,11 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Redirect URI phải khớp 100% với TikTok Developer Portal (Sandbox / Login Kit),
+                        ví dụ <code>http://localhost:8069/tiktok/oauth/callback</code>.
+                        Module đã hỗ trợ PKCE (Desktop/Sandbox).
+                    </div>
                     <group>
                         <group>
                             <field name="name"/>
@@ -28,7 +33,8 @@
                         <group>
                             <field name="client_key" password="True"/>
                             <field name="client_secret" password="True"/>
-                            <field name="redirect_uri"/>
+                            <field name="redirect_uri"
+                                      placeholder="http://localhost:8069/tiktok/oauth/callback"/>
                         </group>
                     </group>
                 </sheet>

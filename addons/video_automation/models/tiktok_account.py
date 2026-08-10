@@ -26,15 +26,15 @@ class TikTokAccount(models.Model):
     username = fields.Char(string="Display Username")
     profile_url = fields.Char()
     open_id = fields.Char(
-        help="TikTok open_id — có thể nhập thủ công nếu không dùng OAuth.",
+        help="TikTok open_id — ID user trong app (sau Login OAuth).",
     )
     access_token = fields.Char(
         groups="video_automation.group_video_automation_manager",
-        help="Access token — có thể cập nhật thủ công.",
+        help="Access token — lấy qua Login TikTok hoặc nhập thủ công.",
     )
     refresh_token = fields.Char(
         groups="video_automation.group_video_automation_manager",
-        help="Refresh token — có thể cập nhật thủ công.",
+        help="Refresh token — lấy qua Login TikTok hoặc nhập thủ công.",
     )
     token_expires_at = fields.Datetime(
         help="Thời điểm access token hết hạn.",
@@ -71,25 +71,41 @@ class TikTokAccount(models.Model):
             account.message_post(body="Tokens cập nhật thủ công — auth_state = connected.")
         return True
 
+    def action_login_tiktok(self):
+        """Alias: Login TikTok (OAuth) để lấy access/refresh token."""
+        return self.action_connect_oauth()
+
     def action_connect_oauth(self):
+        """Mở TikTok Login Kit → callback lưu token vào account."""
         self.ensure_one()
-        if not self.tiktok_app_id:
-            raise UserError("Select a TikTok App first.")
+        if not isinstance(self.id, int):
+            raise UserError("Lưu account trước khi Login TikTok.")
+        app = self.tiktok_app_id
+        if not app:
+            raise UserError("Chọn TikTok App (client_key / secret / redirect_uri) trước.")
+        if not app.client_key or not app.client_secret:
+            raise UserError("TikTok App thiếu client_key hoặc client_secret.")
+        if not app.redirect_uri:
+            raise UserError("TikTok App thiếu redirect_uri.")
+
         state = f"account-{self.id}-{fields.Datetime.now().timestamp()}"
         code_verifier = generate_code_verifier()
         self.write({"oauth_state": state, "oauth_code_verifier": code_verifier})
-        client = TikTokClient(self.tiktok_app_id, self)
+        client = TikTokClient(app, self)
         url = client.build_authorize_url(state, code_verifier)
+        self.message_post(body=f"Bắt đầu Login TikTok OAuth. Redirect URI: {app.redirect_uri}")
         return {
             "type": "ir.actions.act_url",
             "url": url,
             "target": "new",
         }
 
-    def apply_token_response(self, data):
+    def apply_token_response(self, data, fetch_profile=True):
         self.ensure_one()
-        # TikTok may wrap in data key depending on endpoint version
         payload = data.get("data") if isinstance(data.get("data"), dict) else data
+        if not payload.get("access_token"):
+            raise UserError(f"TikTok không trả access_token: {data}")
+
         expires_in = int(payload.get("expires_in") or 0)
         vals = {
             "open_id": payload.get("open_id") or self.open_id,
@@ -100,6 +116,29 @@ class TikTokAccount(models.Model):
             "token_expires_at": datetime.utcnow() + timedelta(seconds=expires_in or 86400),
         }
         self.write(vals)
+
+        if fetch_profile and vals.get("access_token"):
+            try:
+                client = TikTokClient(self.tiktok_app_id, self)
+                user = client.get_user_info(vals["access_token"])
+                profile_vals = {}
+                if user.get("open_id"):
+                    profile_vals["open_id"] = user["open_id"]
+                if user.get("display_name"):
+                    profile_vals["username"] = user["display_name"]
+                    if not self.name or self.name.startswith("TikTok"):
+                        profile_vals["name"] = user["display_name"]
+                if profile_vals:
+                    self.write(profile_vals)
+            except Exception:
+                _logger.exception("Fetch TikTok user info failed for account %s", self.id)
+
+        self.message_post(
+            body=(
+                f"Login TikTok thành công. open_id={self.open_id or '-'}, "
+                f"expires_at={self.token_expires_at or '-'}"
+            )
+        )
 
     def ensure_valid_token(self):
         self.ensure_one()
@@ -117,7 +156,7 @@ class TikTokAccount(models.Model):
             try:
                 client = TikTokClient(account.tiktok_app_id, account)
                 data = client.refresh_access_token(account.refresh_token)
-                account.apply_token_response(data)
+                account.apply_token_response(data, fetch_profile=False)
             except Exception as exc:
                 _logger.exception("Token refresh failed for account %s", account.id)
                 account.write({"auth_state": "expired"})

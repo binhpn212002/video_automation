@@ -24,7 +24,9 @@ class TikTokPublishQueue(models.Model):
     scheduled_time = fields.Datetime(required=True, index=True)
     schedule_date = fields.Date(required=True, index=True)
     slot_time = fields.Char(required=True, help="HH:MM slot key")
-    caption = fields.Text()
+    caption = fields.Text(
+        help="Caption lưu trên queue (user edit khi post từ Inbox TikTok)."
+    )
     privacy_level = fields.Selection(
         [
             ("SELF_ONLY", "Private (Self Only)"),
@@ -39,17 +41,18 @@ class TikTokPublishQueue(models.Model):
         [
             ("pending", "Pending"),
             ("uploading", "Uploading"),
-            ("success", "Success"),
+            ("success", "In TikTok Inbox"),
             ("failed", "Failed"),
         ],
         default="pending",
         required=True,
         tracking=True,
         index=True,
+        help="success = video đã vào TikTok Inbox (draft); user mở app → Edit → Post.",
     )
     retry_count = fields.Integer(default=0)
     error_message = fields.Text()
-    tiktok_publish_id = fields.Char()
+    tiktok_publish_id = fields.Char(string="TikTok publish_id")
     share_url = fields.Char()
 
     _sql_constraints = [
@@ -145,22 +148,28 @@ class TikTokPublishQueue(models.Model):
             row._publish()
 
     def _publish(self):
+        """
+        Draft/Inbox flow (PULL_FROM_URL):
+          POST /v2/post/publish/inbox/video/init/
+              source=PULL_FROM_URL, video_url=<CDN>
+          → TikTok tự pull video
+          → User mở TikTok Inbox → Edit → Post
+        """
         self.ensure_one()
         account = self.tiktok_account_id
         video = self.video_id
         self.write({"state": "uploading", "error_message": False})
         try:
             account.ensure_valid_token()
-            if not video.cdn_url:
-                raise UserError("Video has no CDN URL.")
+            video_url = video.cdn_url
+            if not video_url:
+                raise UserError(
+                    "Video chưa có CDN URL. Kiểm tra storage/cdn_domain và Rebuild CDN URL."
+                )
+
             client = TikTokClient(account.tiktok_app_id, account)
-            result = client.init_pull_from_url(
-                video.cdn_url,
-                self.caption or video.name,
-                privacy_level=self.privacy_level or "SELF_ONLY",
-            )
-            data = result.get("data") or {}
-            publish_id = data.get("publish_id")
+            result = client.publish_inbox_draft_from_url(video_url)
+            publish_id = result.get("publish_id")
             self.write(
                 {
                     "state": "success",
@@ -168,6 +177,14 @@ class TikTokPublishQueue(models.Model):
                 }
             )
             video.published_count += 1
+            self.message_post(
+                body=(
+                    f"Đã gửi draft vào TikTok Inbox (PULL_FROM_URL). "
+                    f"publish_id=<code>{publish_id}</code>. "
+                    f"URL=<code>{video_url}</code>. "
+                    f"Mở app TikTok → Inbox → Edit → Post."
+                )
+            )
             self.env["tiktok.upload.history"].create(
                 {
                     "video_id": video.id,
@@ -175,11 +192,19 @@ class TikTokPublishQueue(models.Model):
                     "publish_queue_id": self.id,
                     "upload_time": fields.Datetime.now(),
                     "status": "success",
-                    "response": str(self._sanitize_response(result)),
+                    "response": str(
+                        self._sanitize_response(
+                            {
+                                "publish_id": publish_id,
+                                "mode": "inbox_pull_from_url",
+                                "video_url": video_url,
+                            }
+                        )
+                    ),
                 }
             )
         except Exception as exc:
-            _logger.exception("Publish failed for queue %s", self.id)
+            _logger.exception("Inbox publish failed for queue %s", self.id)
             self.write({"state": "failed", "error_message": str(exc)})
             self.env["tiktok.upload.history"].create(
                 {
@@ -194,8 +219,7 @@ class TikTokPublishQueue(models.Model):
 
     @staticmethod
     def _sanitize_response(payload):
-        text = str(payload)
-        return text[:5000]
+        return str(payload)[:5000]
 
     @api.model
     def cron_publish_due(self):
