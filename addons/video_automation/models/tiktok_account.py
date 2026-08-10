@@ -71,6 +71,22 @@ class TikTokAccount(models.Model):
             account.message_post(body="Tokens cập nhật thủ công — auth_state = connected.")
         return True
 
+    def action_publish_video(self):
+        """Mở wizard chọn video → Apply (FILE_UPLOAD vào TikTok Inbox)."""
+        self.ensure_one()
+        if not isinstance(self.id, int):
+            raise UserError("Lưu account trước khi đăng video.")
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Đăng video TikTok",
+            "res_model": "tiktok.publish.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_tiktok_account_id": self.id,
+            },
+        }
+
     def action_login_tiktok(self):
         """Alias: Login TikTok (OAuth) để lấy access/refresh token."""
         return self.action_connect_oauth()

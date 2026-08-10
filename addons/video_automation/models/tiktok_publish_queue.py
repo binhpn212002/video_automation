@@ -1,13 +1,29 @@
 import logging
+import os
+import shutil
+import tempfile
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
+from ..services.r2_client import R2Client
 from ..services.tiktok_client import TikTokClient
 
 _logger = logging.getLogger(__name__)
+
+# Docker mount ./tmp → /tmp/video_work
+_WORK_ROOT = "/tmp/video_work"
+
+
+def _make_upload_tempdir():
+    """Tạo thư mục temp để kéo video về trước khi FILE_UPLOAD."""
+    root = _WORK_ROOT if os.path.isdir(_WORK_ROOT) else None
+    if root:
+        os.makedirs(root, exist_ok=True)
+        return tempfile.mkdtemp(prefix="va_tiktok_", dir=root)
+    return tempfile.mkdtemp(prefix="va_tiktok_")
 
 
 class TikTokPublishQueue(models.Model):
@@ -149,26 +165,38 @@ class TikTokPublishQueue(models.Model):
 
     def _publish(self):
         """
-        Draft/Inbox flow (PULL_FROM_URL):
-          POST /v2/post/publish/inbox/video/init/
-              source=PULL_FROM_URL, video_url=<CDN>
-          → TikTok tự pull video
-          → User mở TikTok Inbox → Edit → Post
+        Draft/Inbox FILE_UPLOAD:
+          1. Download video từ R2 → thư mục temp
+          2. POST /v2/post/publish/inbox/video/init/ (source=FILE_UPLOAD)
+          3. PUT binary lên upload_url
+          4. Xóa temp
+          5. User: TikTok Inbox → Edit → Post
         """
         self.ensure_one()
         account = self.tiktok_account_id
         video = self.video_id
         self.write({"state": "uploading", "error_message": False})
+        work_dir = None
         try:
             account.ensure_valid_token()
-            video_url = video.cdn_url
-            if not video_url:
-                raise UserError(
-                    "Video chưa có CDN URL. Kiểm tra storage/cdn_domain và Rebuild CDN URL."
-                )
+            if not video.storage_id or not video.storage_path:
+                raise UserError("Video chưa có trên R2 (thiếu storage_path).")
+
+            work_dir = _make_upload_tempdir()
+            local_name = os.path.basename(video.storage_path) or "video.mp4"
+            local_path = os.path.join(work_dir, local_name)
+            _logger.info(
+                "Download R2 %s → temp %s (queue %s)",
+                video.storage_path,
+                local_path,
+                self.id,
+            )
+            R2Client(video.storage_id).download_file(video.storage_path, local_path)
+            if not os.path.isfile(local_path) or os.path.getsize(local_path) <= 0:
+                raise UserError("Download video từ R2 thất bại hoặc file rỗng.")
 
             client = TikTokClient(account.tiktok_app_id, account)
-            result = client.publish_inbox_draft_from_url(video_url)
+            result = client.publish_inbox_draft_from_file(local_path)
             publish_id = result.get("publish_id")
             self.write(
                 {
@@ -179,9 +207,8 @@ class TikTokPublishQueue(models.Model):
             video.published_count += 1
             self.message_post(
                 body=(
-                    f"Đã gửi draft vào TikTok Inbox (PULL_FROM_URL). "
+                    f"Đã upload draft vào TikTok Inbox (FILE_UPLOAD). "
                     f"publish_id=<code>{publish_id}</code>. "
-                    f"URL=<code>{video_url}</code>. "
                     f"Mở app TikTok → Inbox → Edit → Post."
                 )
             )
@@ -196,8 +223,9 @@ class TikTokPublishQueue(models.Model):
                         self._sanitize_response(
                             {
                                 "publish_id": publish_id,
-                                "mode": "inbox_pull_from_url",
-                                "video_url": video_url,
+                                "mode": "inbox_file_upload",
+                                "video_size": result.get("_video_size"),
+                                "temp_path": local_path,
                             }
                         )
                     ),
@@ -216,6 +244,9 @@ class TikTokPublishQueue(models.Model):
                     "response": str(exc),
                 }
             )
+        finally:
+            if work_dir:
+                shutil.rmtree(work_dir, ignore_errors=True)
 
     @staticmethod
     def _sanitize_response(payload):

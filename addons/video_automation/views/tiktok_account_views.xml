@@ -19,9 +19,12 @@
                 <field name="token_expires_at"/>
                 <field name="timezone" optional="hide"/>
                 <field name="active"/>
+                <button name="action_publish_video" type="object"
+                        string="Đăng video" title="Chọn video → upload TikTok Inbox"
+                        class="btn-primary"
+                        icon="fa-upload"/>
                 <button name="action_login_tiktok" type="object"
                         string="Login TikTok" title="OAuth Login để lấy token"
-                        class="btn-primary"
                         icon="fa-sign-in"/>
                 <button name="action_apply_manual_tokens" type="object"
                         string="Apply tokens" title="Đánh dấu Connected sau khi sửa token"
@@ -41,8 +44,10 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_login_tiktok" type="object" string="Login TikTok"
+                    <button name="action_publish_video" type="object" string="Đăng video"
                             class="btn-primary"
+                            title="Chọn video → Apply upload TikTok Inbox"/>
+                    <button name="action_login_tiktok" type="object" string="Login TikTok"
                             title="Mở TikTok OAuth để lấy access/refresh token"/>
                     <button name="action_apply_manual_tokens" type="object"
                             string="Apply Manual Tokens"

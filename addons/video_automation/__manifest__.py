@@ -1,6 +1,6 @@
 {
     "name": "Video Automation",
-    "version": "17.0.2.3.0",
+    "version": "17.0.2.7.0",
     "category": "Marketing",
     "summary": "Cloudflare R2 + Auto Schedule + TikTok Inbox Draft",
     "description": """
@@ -9,7 +9,7 @@ Video Automation Auto Schedule
 - Store media on Cloudflare R2
 - Generate videos with FFmpeg
 - Auto-create TikTok publish queue (FIFO)
-- Upload draft to TikTok Inbox (PULL_FROM_URL → user Edit → Post)
+- Upload draft to TikTok Inbox (FILE_UPLOAD via temp → user Edit → Post)
     """,
     "author": "Video Automation",
     "license": "LGPL-3",
@@ -32,6 +32,7 @@ Video Automation Auto Schedule
         "views/tiktok_upload_history_views.xml",
         "wizard/video_extract_audio_wizard_views.xml",
         "wizard/video_generate_wizard_views.xml",
+        "wizard/tiktok_publish_wizard_views.xml",
         "views/menu_views.xml",
     ],
     "installable": True,
