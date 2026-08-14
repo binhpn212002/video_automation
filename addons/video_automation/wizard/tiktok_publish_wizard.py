@@ -16,20 +16,34 @@ class TikTokPublishWizard(models.TransientModel):
         "video.library",
         string="Video",
         required=True,
-        domain="[('storage_path', '!=', False)]",
+        domain="[('id', 'in', available_video_ids)]",
+    )
+    available_video_ids = fields.Many2many(
+        "video.library",
+        compute="_compute_available_video_ids",
     )
     caption = fields.Text(
         string="Caption (gợi ý)",
         help="Lưu trên queue; khi post từ Inbox TikTok user vẫn edit caption trong app.",
     )
 
+    @api.depends("tiktok_account_id", "tiktok_account_id.bucket_id")
+    def _compute_available_video_ids(self):
+        History = self.env["tiktok.upload.history"]
+        Video = self.env["video.library"]
+        for wiz in self:
+            domain = [("storage_path", "!=", False)]
+            account = wiz.tiktok_account_id
+            if account.bucket_id:
+                domain.append(("storage_id", "=", account.bucket_id.id))
+            posted_ids = History.posted_video_ids(account)
+            if posted_ids:
+                domain.append(("id", "not in", posted_ids))
+            wiz.available_video_ids = Video.search(domain)
+
     @api.onchange("tiktok_account_id")
     def _onchange_tiktok_account_id(self):
         self.video_id = False
-        domain = [("storage_path", "!=", False)]
-        if self.tiktok_account_id.bucket_id:
-            domain.append(("storage_id", "=", self.tiktok_account_id.bucket_id.id))
-        return {"domain": {"video_id": domain}}
 
     def action_apply(self):
         """Chọn video → kéo về temp → FILE_UPLOAD vào TikTok Inbox."""
@@ -46,6 +60,7 @@ class TikTokPublishWizard(models.TransientModel):
             )
         if not video.storage_path or not video.storage_id:
             raise UserError("Video chưa upload lên R2.")
+        self.env["tiktok.upload.history"].assert_can_post(account, video)
         account.ensure_valid_token()
 
         tz_name = account.timezone or "UTC"

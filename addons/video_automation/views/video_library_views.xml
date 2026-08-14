@@ -8,6 +8,7 @@
                 <field name="name"/>
                 <field name="state"/>
                 <field name="generated"/>
+                <field name="is_posted" string="Đã đăng"/>
                 <field name="duration"/>
                 <field name="scheduled_count"/>
                 <field name="published_count"/>
@@ -63,6 +64,9 @@
                             <field name="filename"/>
                             <field name="storage_id"/>
                             <field name="generated"/>
+                            <field name="is_posted"/>
+                            <field name="posted_account_ids" widget="many2many_tags" readonly="1"
+                                     invisible="not is_posted"/>
                             <field name="audio_id"/>
                             <field name="allow_republish"/>
                         </group>
@@ -86,6 +90,18 @@
                         <field name="bitrate" readonly="1"/>
                         <field name="file_size" readonly="1"/>
                     </group>
+                    <notebook>
+                        <page string="Lịch sử đăng TikTok" name="upload_history">
+                            <field name="upload_history_ids" readonly="1">
+                                <tree>
+                                    <field name="upload_time"/>
+                                    <field name="tiktok_account_id"/>
+                                    <field name="status"/>
+                                    <field name="publish_queue_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
@@ -115,6 +131,11 @@
                         domain="[('state', '=', 'available')]"/>
                 <filter name="filter_uploaded" string="Uploaded"
                         domain="[('state', '=', 'uploaded')]"/>
+                <separator/>
+                <filter name="filter_posted" string="Đã đăng"
+                        domain="[('is_posted', '=', True)]"/>
+                <filter name="filter_not_posted" string="Chưa đăng"
+                        domain="[('is_posted', '=', False)]"/>
                 <group expand="0" string="Group By">
                     <filter name="groupby_generated" string="Generated"
                             context="{'group_by': 'generated'}"/>

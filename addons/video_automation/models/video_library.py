@@ -84,6 +84,21 @@ class VideoLibrary(models.Model):
     publish_queue_ids = fields.One2many(
         "tiktok.publish.queue", "video_id", string="Publish Queue"
     )
+    upload_history_ids = fields.One2many(
+        "tiktok.upload.history", "video_id", string="Lịch sử đăng TikTok"
+    )
+    is_posted = fields.Boolean(
+        string="Đã đăng",
+        compute="_compute_is_posted",
+        store=True,
+        help="True nếu video đã đăng thành công ít nhất 1 tài khoản TikTok.",
+    )
+    posted_account_ids = fields.Many2many(
+        "tiktok.account",
+        string="Tài khoản đã đăng",
+        compute="_compute_posted_account_ids",
+        help="Các tài khoản TikTok đã đăng video này thành công.",
+    )
     # Temporary local file — cleared after R2 upload (not kept in Odoo)
     upload_file = fields.Binary(string="Video file", attachment=False)
     upload_filename = fields.Char()
@@ -92,6 +107,25 @@ class VideoLibrary(models.Model):
         compute="_compute_preview_html",
         sanitize=False,
     )
+
+    @api.depends(
+        "upload_history_ids",
+        "upload_history_ids.status",
+        "upload_history_ids.tiktok_account_id",
+    )
+    def _compute_is_posted(self):
+        for video in self:
+            video.is_posted = any(h.status == "success" for h in video.upload_history_ids)
+
+    @api.depends(
+        "upload_history_ids",
+        "upload_history_ids.status",
+        "upload_history_ids.tiktok_account_id",
+    )
+    def _compute_posted_account_ids(self):
+        for video in self:
+            success = video.upload_history_ids.filtered(lambda h: h.status == "success")
+            video.posted_account_ids = success.mapped("tiktok_account_id")
 
     @api.depends("storage_id", "storage_id.cdn_domain", "storage_id.bucket_name", "storage_path")
     def _compute_cdn_url(self):
@@ -251,22 +285,11 @@ class VideoLibrary(models.Model):
             domain.append(("storage_id", "=", account.bucket_id.id))
         videos = self.search(domain, order="create_date asc, id asc")
         selected = self.env["video.library"]
+        posted_ids = set(History.posted_video_ids(account))
         for video in videos:
             if len(selected) >= limit:
                 break
-            if not video.allow_republish:
-                if History.search_count(
-                    [("video_id", "=", video.id), ("status", "=", "success")]
-                ):
-                    continue
-            if not allow_republish_rule:
-                if History.search_count(
-                    [
-                        ("video_id", "=", video.id),
-                        ("tiktok_account_id", "=", account.id),
-                        ("status", "=", "success"),
-                    ]
-                ):
-                    continue
+            if video.id in posted_ids:
+                continue
             selected |= video
         return selected

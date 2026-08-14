@@ -9,6 +9,7 @@
                 <field name="video_id"/>
                 <field name="tiktok_account_id"/>
                 <field name="status"/>
+                <field name="publish_queue_id" optional="hide"/>
             </tree>
         </field>
     </record>

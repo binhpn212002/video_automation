@@ -1,6 +1,6 @@
 {
     "name": "Video Automation",
-    "version": "17.0.2.7.0",
+    "version": "17.0.2.8.0",
     "category": "Marketing",
     "summary": "Cloudflare R2 + Auto Schedule + TikTok Inbox Draft",
     "description": """

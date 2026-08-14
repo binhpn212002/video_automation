@@ -7,15 +7,16 @@
             <form string="Đăng video TikTok Inbox">
                 <group>
                     <field name="tiktok_account_id" readonly="1"/>
+                    <field name="available_video_ids" invisible="1"/>
                     <field name="video_id"
                              options="{'no_create': True}"
-                             placeholder="Chọn video trên R2"/>
+                             placeholder="Chọn video chưa đăng trên account này"/>
                     <field name="caption"
                              placeholder="Gợi ý caption (optional)"/>
                 </group>
                 <div class="alert alert-info" role="alert">
                     Apply sẽ kéo video về temp rồi upload TikTok Inbox
-                    (<code>FILE_UPLOAD</code>). Sau đó mở app → Inbox → Edit → Post.
+                    (<code>FILE_UPLOAD</code>). Video đã đăng trên account này sẽ không chọn được.
                 </div>
                 <footer>
                     <button name="action_apply" type="object" string="Apply"

@@ -178,6 +178,7 @@ class TikTokPublishQueue(models.Model):
         self.write({"state": "uploading", "error_message": False})
         work_dir = None
         try:
+            self.env["tiktok.upload.history"].assert_can_post(account, video)
             account.ensure_valid_token()
             if not video.storage_id or not video.storage_path:
                 raise UserError("Video chưa có trên R2 (thiếu storage_path).")
