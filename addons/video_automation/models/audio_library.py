@@ -90,7 +90,7 @@ class AudioLibrary(models.Model):
         object_key = make_flat_object_key("a", ext, record_id=self.id)
         content_type = mimetypes.guess_type(object_key)[0] or "audio/mpeg"
         work_dir = _make_workdir("va_aupload_")
-        local_path = os.path.join(work_dir, object_key)
+        local_path = os.path.join(work_dir, os.path.basename(object_key))
         try:
             with open(local_path, "wb") as fh:
                 fh.write(base64.b64decode(self.upload_file))

@@ -16,9 +16,14 @@
         <field name="name">tiktok.schedule.rule.tree</field>
         <field name="model">tiktok.schedule.rule</field>
         <field name="arch" type="xml">
-            <tree>
+            <tree decoration-danger="pool_status == 'critical'"
+                  decoration-warning="pool_status == 'warning'">
                 <field name="name"/>
                 <field name="tiktok_account_id"/>
+                <field name="slots_per_day"/>
+                <field name="pool_available_count"/>
+                <field name="pool_needed"/>
+                <field name="pool_status"/>
                 <field name="allow_republish"/>
                 <field name="active"/>
             </tree>
@@ -30,7 +35,25 @@
         <field name="model">tiktok.schedule.rule</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button name="action_top_up_pool" type="object" string="Gen bù pool"
+                            class="btn-primary"
+                            help="Generate video mới từ raw cho đến ngưỡng buffer"/>
+                    <field name="pool_status" widget="statusbar"
+                            statusbar_visible="ok,warning,critical"/>
+                </header>
                 <sheet>
+                    <div class="alert alert-danger" role="alert"
+                         invisible="pool_status != 'critical'">
+                        Pool thiếu cho ngày mai: còn <field name="pool_available_count"/> video
+                        chưa đăng, cần <field name="slots_per_day"/> slot/ngày.
+                        Upload raw hoặc bấm <b>Gen bù pool</b>.
+                    </div>
+                    <div class="alert alert-warning" role="alert"
+                         invisible="pool_status != 'warning'">
+                        Pool sắp thiếu buffer: còn <field name="pool_available_count"/> /
+                        cần <field name="pool_needed"/> (slots × buffer ngày).
+                    </div>
                     <group>
                         <group>
                             <field name="name"/>
@@ -41,6 +64,9 @@
                         </group>
                         <group>
                             <field name="caption_template"/>
+                            <field name="slots_per_day"/>
+                            <field name="pool_available_count"/>
+                            <field name="pool_needed"/>
                         </group>
                     </group>
                     <notebook>
@@ -55,6 +81,10 @@
                         </page>
                     </notebook>
                 </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
             </form>
         </field>
     </record>

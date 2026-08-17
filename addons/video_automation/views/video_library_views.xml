@@ -8,6 +8,7 @@
                 <field name="name"/>
                 <field name="state"/>
                 <field name="generated"/>
+                <field name="source_video_id" optional="hide"/>
                 <field name="is_posted" string="Đã đăng"/>
                 <field name="duration"/>
                 <field name="scheduled_count"/>
@@ -64,6 +65,7 @@
                             <field name="filename"/>
                             <field name="storage_id"/>
                             <field name="generated"/>
+                            <field name="source_video_id" readonly="1" invisible="not source_video_id"/>
                             <field name="is_posted"/>
                             <field name="posted_account_ids" widget="many2many_tags" readonly="1"
                                      invisible="not is_posted"/>
@@ -91,6 +93,18 @@
                         <field name="file_size" readonly="1"/>
                     </group>
                     <notebook>
+                        <page string="Video đã generate" name="generated_children"
+                              invisible="generated">
+                            <field name="generated_child_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="audio_id"/>
+                                    <field name="state"/>
+                                    <field name="is_posted"/>
+                                    <field name="create_date"/>
+                                </tree>
+                            </field>
+                        </page>
                         <page string="Lịch sử đăng TikTok" name="upload_history">
                             <field name="upload_history_ids" readonly="1">
                                 <tree>
@@ -124,7 +138,7 @@
                 <separator/>
                 <filter name="filter_generated" string="Generated"
                         domain="[('generated', '=', True)]"/>
-                <filter name="filter_not_generated" string="Not Generated"
+                <filter name="filter_not_generated" string="Not Generated / Raw"
                         domain="[('generated', '=', False)]"/>
                 <separator/>
                 <filter name="filter_available" string="Available"

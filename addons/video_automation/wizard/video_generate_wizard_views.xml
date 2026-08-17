@@ -10,7 +10,7 @@
                     <field name="audio_id" options="{'no_create': False}"
                             placeholder="Để trống = auto chọn nhạc"/>
                     <div class="text-muted" colspan="2">
-                        Không chọn nhạc → hệ thống tự chọn ngẫu nhiên 1 audio trong Audio Library.
+                        Tạo <b>video mới</b> (không ghi đè bản gốc). Để trống nhạc = chọn audio ít dùng nhất.
                     </div>
                     <field name="output_name" placeholder="Tên file output (optional)"/>
                     <field name="logo_filename" invisible="1"/>

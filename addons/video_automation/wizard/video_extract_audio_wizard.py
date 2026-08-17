@@ -62,6 +62,8 @@ class VideoExtractAudioWizard(models.TransientModel):
             video.message_post(
                 body=f"Extracted audio <b>{audio_name}</b> → Audio Library #{audio.id}"
             )
+        except FileNotFoundError as exc:
+            raise UserError(str(exc)) from exc
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 

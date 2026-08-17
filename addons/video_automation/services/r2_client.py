@@ -1,10 +1,12 @@
 import logging
+import os
 import secrets
 import time
 from urllib.parse import urlparse
 
 import boto3
 from botocore.client import Config
+from botocore.exceptions import ClientError
 
 _logger = logging.getLogger(__name__)
 
@@ -56,8 +58,71 @@ class R2Client:
         self.client.upload_fileobj(fileobj, self.bucket, object_key, **kwargs)
         return self.cdn_url(object_key)
 
+    def normalize_object_key(self, object_key):
+        key = (object_key or "").strip()
+        if key.startswith("http://") or key.startswith("https://"):
+            parsed = urlparse(key)
+            key = (parsed.path or "").lstrip("/")
+            bucket = (self.bucket or "").strip()
+            if bucket and key.startswith(bucket + "/"):
+                key = key[len(bucket) + 1 :]
+        return key.lstrip("/")
+
+    def resolve_object_key(self, object_key):
+        """
+        Find an existing R2 key. Tries stored path, basename, and video/audio prefixes.
+        Older uploads may live at bucket root; newer ones under video/ or audio/.
+        """
+        key = self.normalize_object_key(object_key)
+        if not key:
+            raise FileNotFoundError("Empty object key")
+
+        base = key.split("/")[-1]
+        candidates = [key]
+        if base and base != key:
+            candidates.append(base)
+        lower = base.lower()
+        if lower.endswith((".mp4", ".mov", ".webm", ".mkv")) or base.startswith(("v_", "g_")):
+            candidates.append(f"video/{base}")
+        if lower.endswith((".mp3", ".m4a", ".aac", ".wav")) or base.startswith("a_"):
+            candidates.append(f"audio/{base}")
+
+        seen = set()
+        last_error = None
+        for cand in candidates:
+            if not cand or cand in seen:
+                continue
+            seen.add(cand)
+            try:
+                self.client.head_object(Bucket=self.bucket, Key=cand)
+                if cand != key:
+                    _logger.warning(
+                        "R2 key %r missing in %s; using %r",
+                        key,
+                        self.bucket,
+                        cand,
+                    )
+                return cand
+            except ClientError as exc:
+                code = (exc.response.get("Error") or {}).get("Code") or ""
+                status = (exc.response.get("ResponseMetadata") or {}).get(
+                    "HTTPStatusCode"
+                )
+                if code in ("404", "NoSuchKey", "NotFound") or status == 404:
+                    last_error = exc
+                    continue
+                raise
+        tried = ", ".join(seen) or key
+        raise FileNotFoundError(
+            f"R2 object not found in bucket '{self.bucket}'. "
+            f"Tried keys: {tried}. Last error: {last_error}"
+        ) from last_error
+
     def download_file(self, object_key, local_path):
-        self.client.download_file(self.bucket, object_key, local_path)
+        key = self.resolve_object_key(object_key)
+        os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
+        self.client.download_file(self.bucket, key, local_path)
+        return key
 
     def cdn_url(self, object_key):
         """

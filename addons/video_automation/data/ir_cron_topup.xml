@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="cron_top_up_video_pool" model="ir.cron">
+        <field name="name">VA: Auto Top-up Generated Pool</field>
+        <field name="model_id" ref="model_video_library"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_top_up_pool()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

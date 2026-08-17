@@ -7,7 +7,7 @@ import tempfile
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.ffmpeg_service import probe_media
+from ..services.ffmpeg_service import generate_video, probe_media
 from ..services.r2_client import R2Client, make_flat_object_key
 
 _logger = logging.getLogger(__name__)
@@ -80,6 +80,18 @@ class VideoLibrary(models.Model):
         string="Audio used",
         help="Audio đã dùng khi generate.",
         readonly=True,
+    )
+    source_video_id = fields.Many2one(
+        "video.library",
+        string="Video gốc",
+        ondelete="set null",
+        index=True,
+        help="Raw video dùng để generate output này. Output là record mới, không ghi đè gốc.",
+    )
+    generated_child_ids = fields.One2many(
+        "video.library",
+        "source_video_id",
+        string="Video đã generate",
     )
     publish_queue_ids = fields.One2many(
         "tiktok.publish.queue", "video_id", string="Publish Queue"
@@ -238,7 +250,7 @@ class VideoLibrary(models.Model):
         ext = os.path.splitext(original_name)[1] or ".mp4"
         object_key = make_flat_object_key("v", ext, record_id=self.id)
         work_dir = _make_workdir("va_vupload_")
-        local_path = os.path.join(work_dir, object_key)
+        local_path = os.path.join(work_dir, os.path.basename(object_key))
         try:
             with open(local_path, "wb") as fh:
                 fh.write(base64.b64decode(self.upload_file))
@@ -293,3 +305,155 @@ class VideoLibrary(models.Model):
                 continue
             selected |= video
         return selected
+
+    def _get_raw_video(self):
+        """Walk source_video_id until the original raw clip."""
+        self.ensure_one()
+        video = self
+        seen = {video.id}
+        while video.source_video_id and video.source_video_id.id not in seen:
+            video = video.source_video_id
+            seen.add(video.id)
+        return video
+
+    def _raw_storage_path(self):
+        """R2 key of the original (pre-generate) file."""
+        self.ensure_one()
+        raw = self._get_raw_video()
+        return raw.original_storage_path or raw.storage_path
+
+    @api.model
+    def _pick_audio(self, storage=None):
+        """Least-used active audio (prefer same storage)."""
+        Audio = self.env["audio.library"]
+        domain = [("active", "=", True), ("storage_path", "!=", False)]
+        audios = Audio.search(domain)
+        if storage:
+            same = audios.filtered(lambda a: a.storage_id == storage)
+            if same:
+                audios = same
+        if not audios:
+            return Audio
+        counts = {
+            audio.id: self.search_count(
+                [("audio_id", "=", audio.id), ("generated", "=", True)]
+            )
+            for audio in audios
+        }
+        return min(audios, key=lambda a: (counts.get(a.id, 0), a.id))
+
+    def generate_output(self, audio=None, logo_path=None, output_name=None):
+        """
+        Create a NEW generated video.library from this (or its raw parent).
+        Does not overwrite the source record or its R2 object.
+        """
+        self.ensure_one()
+        raw = self._get_raw_video()
+        source_path = self._raw_storage_path()
+        if not raw.storage_id or not source_path:
+            raise UserError("Video gốc chưa có trên R2 (thiếu storage_path).")
+
+        audio = audio or self._pick_audio(raw.storage_id)
+        if not audio:
+            raise UserError("Không có audio active trên R2 để generate.")
+        if not audio.storage_path or not audio.storage_id:
+            raise UserError("Audio chưa có trên R2.")
+
+        name = output_name or (raw.name or "Video")
+        child = self.create(
+            {
+                "name": name,
+                "storage_id": raw.storage_id.id,
+                "source_video_id": raw.id,
+                "original_storage_path": source_path,
+                "state": "processing",
+                "generated": False,
+                "allow_republish": raw.allow_republish,
+            }
+        )
+        if not output_name:
+            child.name = f"{raw.name} Generated #{child.id}"
+
+        video_client = R2Client(raw.storage_id)
+        audio_client = R2Client(audio.storage_id)
+        work_dir = _make_workdir("va_gen_")
+        video_local = os.path.join(work_dir, "input.mp4")
+        audio_local = os.path.join(work_dir, "audio.mp3")
+        output_local = os.path.join(work_dir, "output.mp4")
+        try:
+            try:
+                video_client.download_file(source_path, video_local)
+            except FileNotFoundError:
+                if raw.storage_path and raw.storage_path != source_path:
+                    _logger.warning(
+                        "Raw original path missing (%s); fallback to storage_path %s",
+                        source_path,
+                        raw.storage_path,
+                    )
+                    video_client.download_file(raw.storage_path, video_local)
+                else:
+                    raise
+            audio_client.download_file(audio.storage_path, audio_local)
+            generate_video(video_local, audio_local, output_local, logo_path=logo_path)
+
+            object_key = make_flat_object_key("g", ".mp4", record_id=child.id)
+            video_client.upload_file(output_local, object_key, content_type="video/mp4")
+            meta = probe_media(output_local)
+            child.write(
+                {
+                    "filename": object_key,
+                    "storage_path": object_key,
+                    "duration": meta["duration"],
+                    "width": meta["width"],
+                    "height": meta["height"],
+                    "fps": meta["fps"],
+                    "bitrate": meta["bitrate"],
+                    "file_size": meta["file_size"],
+                    "state": "available",
+                    "generated": True,
+                    "audio_id": audio.id,
+                }
+            )
+            raw.message_post(
+                body=(
+                    f"Generated output <b>{child.name}</b> (id={child.id}) "
+                    f"với audio <b>{audio.name}</b> → {object_key}"
+                )
+            )
+            child.message_post(
+                body=f"Tạo từ video gốc <b>{raw.name}</b> + audio <b>{audio.name}</b>."
+            )
+            return child
+        except FileNotFoundError as exc:
+            child.unlink()
+            raise UserError(str(exc)) from exc
+        except Exception:
+            child.unlink()
+            raise
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    @api.model
+    def _raw_candidates(self, storage):
+        """Raw clips that can still be used to generate more outputs."""
+        return self.search(
+            [
+                ("storage_id", "=", storage.id),
+                ("generated", "=", False),
+                ("source_video_id", "=", False),
+                ("storage_path", "!=", False),
+                ("state", "in", ("uploaded", "available")),
+            ],
+            order="create_date asc, id asc",
+        )
+
+    @api.model
+    def cron_top_up_pool(self):
+        storages = self.env["video.storage"].search(
+            [("active", "=", True), ("auto_top_up", "=", True)]
+        )
+        for storage in storages:
+            try:
+                storage.action_top_up_pool()
+            except Exception:
+                _logger.exception("Auto top-up failed for storage %s", storage.id)

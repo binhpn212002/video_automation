@@ -1,13 +1,15 @@
 {
     "name": "Video Automation",
-    "version": "17.0.2.8.0",
+    "version": "17.0.2.9.0",
     "category": "Marketing",
     "summary": "Cloudflare R2 + Auto Schedule + TikTok Inbox Draft",
     "description": """
 Video Automation Auto Schedule
 ==============================
 - Store media on Cloudflare R2
-- Generate videos with FFmpeg
+- Generate creates a new video record (does not overwrite raw)
+- Auto top-up generated pool from raw when below buffer
+- Schedule/storage pool warning (slots × buffer days)
 - Auto-create TikTok publish queue (FIFO)
 - Upload draft to TikTok Inbox (FILE_UPLOAD via temp → user Edit → Post)
     """,
@@ -22,6 +24,7 @@ Video Automation Auto Schedule
         "security/video_automation_security.xml",
         "security/ir.model.access.csv",
         "data/ir_cron_data.xml",
+        "data/ir_cron_topup.xml",
         "views/video_storage_views.xml",
         "views/tiktok_app_views.xml",
         "views/video_library_views.xml",
