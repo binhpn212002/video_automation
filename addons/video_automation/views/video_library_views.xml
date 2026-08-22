@@ -30,10 +30,6 @@
                     <button name="action_upload_to_r2" type="object" string="Upload to R2"
                             class="btn-primary"
                             invisible="not upload_file"/>
-                    <button name="action_gen_video" type="object" string="Generate Video"
-                            class="btn-primary"
-                            invisible="not storage_path"
-                            title="Chọn nhạc và tạo video output"/>
                     <button name="action_extract_audio" type="object" string="Extract Audio"
                             class="btn-secondary"
                             invisible="not storage_path"/>
@@ -56,11 +52,11 @@
                         </group>
                         <group>
                             <div class="text-muted" colspan="2">
-                                Chọn file từ máy → bấm Upload to R2.
-                                Sau đó Gen Video (chọn nhạc) để tạo video output.
+                                Chọn file video hoàn chỉnh từ máy → bấm Upload to R2 để lưu trữ và lên lịch đăng TikTok.
                             </div>
                         </group>
                     </group>
+
                     <group>
                         <group string="Thông Tin Cơ Bản">
                             <field name="name"/>

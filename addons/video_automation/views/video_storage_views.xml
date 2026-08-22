@@ -65,8 +65,9 @@
                         </group>
                     </group>
                     <div class="alert alert-info" role="alert">
-                        <strong>Cơ chế Auto Top-Up:</strong> Khi pool video sẵn sàng thấp hơn số lượng cần, hệ thống sẽ ưu tiên sinh video từ Video Raw trước, sau đó tự động lấy tiếp từ <b>Kho Ảnh Sản Phẩm chưa gen (FIFO)</b> để bù đủ buffer cho lịch đăng.
+                        <strong>Cơ chế Auto Top-Up:</strong> Khi pool video sẵn sàng thấp hơn số lượng cần, hệ thống sẽ tự động lấy từ <b>Kho Ảnh Sản Phẩm chưa gen (FIFO)</b> để sinh video TikTok Affiliate và bù đủ buffer cho lịch đăng.
                     </div>
+
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>

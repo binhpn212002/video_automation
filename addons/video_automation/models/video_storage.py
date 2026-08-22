@@ -134,8 +134,7 @@ class VideoStorage(models.Model):
                 storage.pool_status = "ok"
 
     def action_top_up_pool(self):
-        """Generate new outputs from raw videos and pending affiliate images until pool >= needed (capped per run)."""
-        Video = self.env["video.library"]
+        """Generate new outputs from pending affiliate images (FIFO) until pool >= needed (capped per run)."""
         Image = self.env["product.image"] if "product.image" in self.env else None
         created = self.env["video.library"]
         for storage in self:
@@ -148,22 +147,9 @@ class VideoStorage(models.Model):
             made = 0
             errors = []
 
-            # 1. First priority: Raw Videos
-            raws = Video._raw_candidates(storage)
-            if raws:
-                while made < to_make and raws:
-                    raw = min(raws, key=lambda r: len(r.generated_child_ids))
-                    try:
-                        child = raw.generate_output()
-                        created |= child
-                        made += 1
-                    except Exception as exc:
-                        errors.append(f"Raw '{raw.display_name}': {exc}")
-                        raws -= raw
-
-            # 2. Second priority: Pending Product Images (FIFO)
-            if made < to_make and storage.auto_gen_from_images and Image is not None:
-                pending_imgs = Image._pending_image_candidates(storage, limit=(to_make - made))
+            # Generate exclusively from Pending Product Images (FIFO)
+            if storage.auto_gen_from_images and Image is not None:
+                pending_imgs = Image._pending_image_candidates(storage, limit=to_make)
                 for img in pending_imgs:
                     if made >= to_make:
                         break
@@ -177,17 +163,18 @@ class VideoStorage(models.Model):
             if made == 0 and missing > 0:
                 storage.message_post(
                     body=(
-                        f"Pool thiếu {missing} video generated nhưng không còn raw video "
-                        f"hoặc ảnh sản phẩm chưa gen để auto gen. Hãy upload thêm nguyên liệu."
+                        f"Pool thiếu {missing} video nhưng không còn ảnh sản phẩm chưa gen trên R2 "
+                        f"để auto gen. Hãy upload thêm ảnh sản phẩm."
                     )
                 )
                 continue
 
-            body = f"Auto top-up: tạo {made}/{to_make} video generated (thiếu {missing})."
+            body = f"Auto top-up: tạo {made}/{to_make} video từ ảnh sản phẩm (thiếu {missing})."
             if errors:
                 body += "<br/>Lỗi:<br/>" + "<br/>".join(errors[:10])
             storage.message_post(body=body)
         return created
+
 
     def write(self, vals):
         res = super().write(vals)

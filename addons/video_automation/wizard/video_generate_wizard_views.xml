@@ -4,27 +4,22 @@
         <field name="name">video.generate.wizard.form</field>
         <field name="model">video.generate.wizard</field>
         <field name="arch" type="xml">
-            <form string="Tạo Video TikTok">
+            <form string="Tạo Video TikTok Affiliate từ Ảnh">
                 <group>
-                    <group string="Nguồn Đầu Vào">
-                        <field name="image_id" readonly="1" invisible="not image_id"/>
-                        <field name="video_id" readonly="1" invisible="not video_id"/>
+                    <group string="Nguồn &amp; Âm Thanh">
+                        <field name="image_id" readonly="1"/>
                         <field name="audio_id" options="{'no_create': True}"
                                placeholder="Để trống = tự động chọn nhạc ít dùng"/>
                         <field name="output_name" placeholder="Tên video thành phẩm (tùy chọn)"/>
                     </group>
-                    <group string="Cấu Hình Hiệu Ứng &amp; Text" invisible="not image_id">
+                    <group string="Cấu Hình Hiệu Ứng &amp; Text">
                         <field name="effect_preset"/>
                         <field name="hook_text" placeholder="VD: Mẫu này đang cực hot 🔥"/>
                         <field name="cta_text" placeholder="VD: Xem sản phẩm bên dưới ↓"/>
                     </group>
-                    <group string="Logo (Tùy chọn)" invisible="image_id">
-                        <field name="logo_filename" invisible="1"/>
-                        <field name="logo_file" filename="logo_filename"/>
-                    </group>
                 </group>
                 <div class="alert alert-info" role="alert">
-                    Tạo <b>video mới chuẩn 9:16</b> (1080x1920, 30 FPS). Tự động tạo record trong Thư viện Video và không ghi đè dữ liệu gốc.
+                    Tạo <b>Video TikTok 9:16</b> (1080x1920, 30 FPS) từ ảnh sản phẩm với hiệu ứng Beat Pulse, White Flash, Background Blur và Safe Area Text.
                 </div>
                 <footer>
                     <button name="action_generate" type="object" string="Bắt Đầu Tạo Video"
@@ -35,4 +30,3 @@
         </field>
     </record>
 </odoo>
-

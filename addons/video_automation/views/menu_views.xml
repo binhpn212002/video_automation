@@ -28,11 +28,6 @@
               action="action_video_library"
               sequence="10"/>
 
-    <menuitem id="menu_va_video_generate"
-              name="Video Generate"
-              parent="menu_va_library"
-              action="action_video_generate"
-              sequence="15"/>
 
     <menuitem id="menu_va_audio_library"
               name="Audio"
