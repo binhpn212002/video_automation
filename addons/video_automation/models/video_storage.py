@@ -32,7 +32,12 @@ class VideoStorage(models.Model):
     auto_top_up = fields.Boolean(
         string="Auto gen khi thiếu pool",
         default=True,
-        help="Cron tự generate từ video raw khi pool dưới ngưỡng.",
+        help="Cron tự generate từ video raw / ảnh sản phẩm khi pool dưới ngưỡng.",
+    )
+    auto_gen_from_images = fields.Boolean(
+        string="Auto gen từ Kho Ảnh",
+        default=True,
+        help="Tự động sinh video từ các ảnh sản phẩm chưa gen (FIFO) khi thiếu pool.",
     )
     max_gen_per_run = fields.Integer(
         string="Max gen / lần cron",
@@ -44,6 +49,12 @@ class VideoStorage(models.Model):
         string="Pool generated", compute="_compute_pool_stats"
     )
     pool_raw_count = fields.Integer(string="Raw còn lại", compute="_compute_pool_stats")
+    pool_images_pending_count = fields.Integer(
+        string="Ảnh chưa gen", compute="_compute_pool_stats"
+    )
+    pool_images_generated_count = fields.Integer(
+        string="Ảnh đã gen", compute="_compute_pool_stats"
+    )
     pool_needed = fields.Integer(string="Cần tối thiểu", compute="_compute_pool_stats")
     pool_status = fields.Selection(
         [
@@ -63,6 +74,7 @@ class VideoStorage(models.Model):
     def _compute_pool_stats(self):
         Video = self.env["video.library"]
         Rule = self.env["tiktok.schedule.rule"]
+        Image = self.env["product.image"] if "product.image" in self.env else None
         for storage in self:
             accounts = storage._accounts_using_bucket()
             rules = Rule.search(
@@ -87,10 +99,31 @@ class VideoStorage(models.Model):
                     ("state", "in", ("uploaded", "available")),
                 ]
             )
+            pending_images = 0
+            generated_images = 0
+            if Image is not None:
+                pending_images = Image.search_count(
+                    [
+                        ("storage_id", "=", storage.id),
+                        ("active", "=", True),
+                        ("storage_path", "!=", False),
+                        ("generated", "=", False),
+                        ("state", "in", ("uploaded", "failed")),
+                    ]
+                )
+                generated_images = Image.search_count(
+                    [
+                        ("storage_id", "=", storage.id),
+                        ("generated", "=", True),
+                    ]
+                )
+
             storage.slots_per_day = slots
             storage.pool_needed = needed
             storage.pool_available_count = available
             storage.pool_raw_count = raw
+            storage.pool_images_pending_count = pending_images
+            storage.pool_images_generated_count = generated_images
             if needed <= 0:
                 storage.pool_status = "ok"
             elif available < slots:
@@ -101,8 +134,9 @@ class VideoStorage(models.Model):
                 storage.pool_status = "ok"
 
     def action_top_up_pool(self):
-        """Generate new outputs from raw until pool >= needed (capped per run)."""
+        """Generate new outputs from raw videos and pending affiliate images until pool >= needed (capped per run)."""
         Video = self.env["video.library"]
+        Image = self.env["product.image"] if "product.image" in self.env else None
         created = self.env["video.library"]
         for storage in self:
             storage._compute_pool_stats()
@@ -111,28 +145,44 @@ class VideoStorage(models.Model):
                 continue
             cap = storage.max_gen_per_run or 10
             to_make = min(missing, cap)
-            raws = Video._raw_candidates(storage)
             made = 0
             errors = []
-            if not raws:
+
+            # 1. First priority: Raw Videos
+            raws = Video._raw_candidates(storage)
+            if raws:
+                while made < to_make and raws:
+                    raw = min(raws, key=lambda r: len(r.generated_child_ids))
+                    try:
+                        child = raw.generate_output()
+                        created |= child
+                        made += 1
+                    except Exception as exc:
+                        errors.append(f"Raw '{raw.display_name}': {exc}")
+                        raws -= raw
+
+            # 2. Second priority: Pending Product Images (FIFO)
+            if made < to_make and storage.auto_gen_from_images and Image is not None:
+                pending_imgs = Image._pending_image_candidates(storage, limit=(to_make - made))
+                for img in pending_imgs:
+                    if made >= to_make:
+                        break
+                    try:
+                        child = img.generate_affiliate_video()
+                        created |= child
+                        made += 1
+                    except Exception as exc:
+                        errors.append(f"Ảnh '{img.display_name}': {exc}")
+
+            if made == 0 and missing > 0:
                 storage.message_post(
                     body=(
-                        f"Pool thiếu {missing} video generated nhưng không còn raw "
-                        f"để auto gen. Upload thêm video gốc."
+                        f"Pool thiếu {missing} video generated nhưng không còn raw video "
+                        f"hoặc ảnh sản phẩm chưa gen để auto gen. Hãy upload thêm nguyên liệu."
                     )
                 )
                 continue
-            while made < to_make:
-                raw = min(raws, key=lambda r: len(r.generated_child_ids))
-                try:
-                    child = raw.generate_output()
-                    created |= child
-                    made += 1
-                except Exception as exc:
-                    errors.append(f"{raw.display_name}: {exc}")
-                    raws -= raw
-                    if not raws:
-                        break
+
             body = f"Auto top-up: tạo {made}/{to_make} video generated (thiếu {missing})."
             if errors:
                 body += "<br/>Lỗi:<br/>" + "<br/>".join(errors[:10])

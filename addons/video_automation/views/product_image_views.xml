@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_product_image_tree" model="ir.ui.view">
+        <field name="name">product.image.tree</field>
+        <field name="model">product.image</field>
+        <field name="arch" type="xml">
+            <tree string="Kho Ảnh Sản Phẩm"
+                  decoration-muted="state == 'draft'"
+                  decoration-info="state == 'uploaded'"
+                  decoration-warning="state == 'generating'"
+                  decoration-success="state == 'generated'"
+                  decoration-danger="state == 'failed'">
+                <field name="name"/>
+                <field name="storage_id"/>
+                <field name="storage_path"/>
+                <field name="generated" widget="boolean_toggle"/>
+                <field name="generated_video_count" string="Số Video"/>
+                <field name="last_generated_date"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'uploaded'"
+                       decoration-success="state == 'generated'"
+                       decoration-danger="state == 'failed'"
+                       decoration-warning="state == 'generating'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_product_image_form" model="ir.ui.view">
+        <field name="name">product.image.form</field>
+        <field name="model">product.image</field>
+        <field name="arch" type="xml">
+            <form string="Ảnh Sản Phẩm">
+                <header>
+                    <button name="action_upload_to_r2"
+                            type="object"
+                            string="Tải Lên R2"
+                            class="btn-primary"
+                            invisible="state not in ('draft', 'failed')"/>
+                    <button name="action_open_gen_wizard"
+                            type="object"
+                            string="Tạo Video TikTok"
+                            class="btn-success"
+                            invisible="state not in ('uploaded', 'generated', 'failed')"/>
+                    <button name="action_rebuild_cdn_url"
+                            type="object"
+                            string="Rebuild CDN URL"
+                            class="btn-secondary"
+                            invisible="not storage_path"/>
+                    <button name="action_open_cdn_url"
+                            type="object"
+                            string="Mở Ảnh (CDN)"
+                            class="btn-link"
+                            invisible="not cdn_url"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,uploaded,generating,generated"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" type="action" name="%(action_video_library)d"
+                                icon="fa-video-camera"
+                                context="{'search_default_source_image_id': active_id}">
+                            <field name="generated_video_count" widget="statinfo" string="Video Đã Tạo"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="name" string="Tên Sản Phẩm / Mã SKU"/>
+                        <h1>
+                            <field name="name" placeholder="VD: Áo Thun Nam Basic Cotton 100%"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Lưu Trữ Cloudflare R2">
+                            <field name="storage_id" options="{'no_create': True}"/>
+                            <field name="upload_file" filename="upload_filename" invisible="storage_path"/>
+                            <field name="upload_filename" invisible="1"/>
+                            <field name="storage_path" readonly="1"/>
+                            <field name="cdn_url" widget="url" readonly="1"/>
+                        </group>
+                        <group string="Cấu Hình Nội Dung TikTok">
+                            <field name="default_hook" placeholder="VD: Mẫu này đang cực hot 🔥"/>
+                            <field name="default_cta" placeholder="VD: Xem sản phẩm bên dưới ↓"/>
+                            <field name="generated" readonly="1"/>
+                            <field name="allow_multiple_gen"/>
+                            <field name="last_generated_date" readonly="1"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+
+                    <group string="Thông Số Kỹ Thuật" col="4">
+                        <field name="width" readonly="1"/>
+                        <field name="height" readonly="1"/>
+                        <field name="file_size" readonly="1"/>
+                    </group>
+
+                    <div invisible="not last_error" class="alert alert-danger mt-2" role="alert">
+                        <strong>Lỗi: </strong><field name="last_error" readonly="1"/>
+                    </div>
+
+                    <notebook>
+                        <page string="Xem Trước Hình Ảnh" name="preview">
+                            <field name="preview_html" readonly="1"/>
+                        </page>
+                        <page string="Danh Sách Video Đã Tạo" name="generated_videos">
+                            <field name="generated_video_ids" readonly="1">
+                                <tree string="Videos">
+                                    <field name="name"/>
+                                    <field name="duration" widget="float_time"/>
+                                    <field name="audio_id"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="is_posted" widget="boolean_toggle"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_product_image_search" model="ir.ui.view">
+        <field name="name">product.image.search</field>
+        <field name="model">product.image</field>
+        <field name="arch" type="xml">
+            <search string="Tìm kiếm Ảnh Sản Phẩm">
+                <field name="name"/>
+                <field name="storage_path"/>
+                <field name="storage_id"/>
+                
+                <separator/>
+                <filter string="Chờ Tạo Video (FIFO Queue)" name="filter_pending_gen"
+                        domain="[('generated', '=', False), ('storage_path', '!=', False), ('state', 'in', ('uploaded', 'failed'))]"/>
+                <filter string="Đã Tạo Video" name="filter_generated"
+                        domain="[('generated', '=', True)]"/>
+                <filter string="Chưa Upload R2" name="filter_draft"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter string="Tạo Thất Bại" name="filter_failed"
+                        domain="[('state', '=', 'failed')]"/>
+                
+                <group expand="0" string="Group By">
+                    <filter string="R2 Storage" name="group_storage" context="{'group_by': 'storage_id'}"/>
+                    <filter string="Trạng Thái" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Đã Gen Video" name="group_generated" context="{'group_by': 'generated'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Batch Action for Tree View: Tạo Video TikTok Hàng Loạt -->
+    <record id="action_product_image_batch_generate" model="ir.actions.server">
+        <field name="name">Tạo Video TikTok Hàng Loạt (FIFO)</field>
+        <field name="model_id" ref="model_product_image"/>
+        <field name="binding_model_id" ref="model_product_image"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+            action = records.action_batch_generate_videos()
+        </field>
+    </record>
+
+    <!-- Main Action -->
+    <record id="action_product_image" model="ir.actions.act_window">
+        <field name="name">Kho Ảnh Sản Phẩm</field>
+        <field name="res_model">product.image</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_product_image_search"/>
+        <field name="context">{'search_default_filter_pending_gen': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Tải lên ảnh sản phẩm đầu tiên!
+            </p>
+            <p>
+                Quản lý kho ảnh Affiliate, tự động hóa render video TikTok 9:16 kết hợp beat pulse và text hook/cta.
+            </p>
+        </field>
+    </record>
+</odoo>

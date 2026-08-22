@@ -70,6 +70,34 @@ class VideoLibrary(models.Model):
         tracking=True,
         help="True sau khi Gen Video (merge nhạc) thành công.",
     )
+    source_type = fields.Selection(
+        [
+            ("raw_video", "Raw Video"),
+            ("affiliate_image", "Affiliate Image"),
+        ],
+        default="raw_video",
+        required=True,
+        string="Nguồn tạo",
+        tracking=True,
+    )
+    source_image_id = fields.Many2one(
+        "product.image",
+        string="Ảnh sản phẩm gốc",
+        ondelete="set null",
+        index=True,
+        help="Ảnh sản phẩm Affiliate dùng để tạo video này.",
+    )
+    hook_text = fields.Char(string="Hook Text", help="Câu Hook ở đầu video.")
+    cta_text = fields.Char(string="CTA Text", help="Câu Call-To-Action ở cuối video.")
+    effect_preset = fields.Selection(
+        [
+            ("soft", "Soft (Nhẹ nhàng)"),
+            ("normal", "Normal (Tiêu chuẩn)"),
+            ("strong", "Strong (Mạnh mẽ)"),
+        ],
+        default="normal",
+        string="Cường độ Beat Pulse",
+    )
     original_storage_path = fields.Char(
         string="Original Path",
         help="Đường dẫn video gốc trên R2 (trước khi generate).",

@@ -4,13 +4,15 @@
         <field name="name">video.library.tree</field>
         <field name="model">video.library</field>
         <field name="arch" type="xml">
-            <tree>
+            <tree string="Thư Viện Video">
                 <field name="name"/>
-                <field name="state"/>
-                <field name="generated"/>
+                <field name="source_type" widget="badge"/>
+                <field name="state" widget="badge"/>
+                <field name="generated" widget="boolean_toggle"/>
+                <field name="source_image_id" optional="show"/>
                 <field name="source_video_id" optional="hide"/>
-                <field name="is_posted" string="Đã đăng"/>
-                <field name="duration"/>
+                <field name="is_posted" string="Đã đăng" widget="boolean_toggle"/>
+                <field name="duration" widget="float_time"/>
                 <field name="scheduled_count"/>
                 <field name="published_count"/>
                 <field name="allow_republish"/>
@@ -23,7 +25,7 @@
         <field name="name">video.library.form</field>
         <field name="model">video.library</field>
         <field name="arch" type="xml">
-            <form>
+            <form string="Video Library">
                 <header>
                     <button name="action_upload_to_r2" type="object" string="Upload to R2"
                             class="btn-primary"
@@ -46,7 +48,7 @@
                             statusbar_visible="draft,uploaded,processing,available"/>
                 </header>
                 <sheet>
-                    <group string="Import from device">
+                    <group string="Import from device" invisible="storage_path">
                         <group>
                             <field name="upload_filename" invisible="1"/>
                             <field name="upload_file" filename="upload_filename"
@@ -60,19 +62,21 @@
                         </group>
                     </group>
                     <group>
-                        <group>
+                        <group string="Thông Tin Cơ Bản">
                             <field name="name"/>
+                            <field name="source_type"/>
+                            <field name="source_image_id" readonly="1" invisible="not source_image_id"/>
+                            <field name="source_video_id" readonly="1" invisible="not source_video_id"/>
                             <field name="filename"/>
                             <field name="storage_id"/>
                             <field name="generated"/>
-                            <field name="source_video_id" readonly="1" invisible="not source_video_id"/>
+                            <field name="audio_id"/>
                             <field name="is_posted"/>
                             <field name="posted_account_ids" widget="many2many_tags" readonly="1"
                                      invisible="not is_posted"/>
-                            <field name="audio_id"/>
                             <field name="allow_republish"/>
                         </group>
-                        <group>
+                        <group string="Lưu Trữ &amp; Kỹ Thuật">
                             <field name="storage_path" readonly="1"/>
                             <field name="original_storage_path" readonly="1"/>
                             <field name="cdn_url" widget="url" readonly="1"/>
@@ -81,10 +85,21 @@
                             <field name="published_count"/>
                         </group>
                     </group>
+
+                    <group string="Cấu Hình Nội Dung &amp; Hiệu Ứng" invisible="source_type != 'affiliate_image'">
+                        <group>
+                            <field name="effect_preset" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="hook_text" readonly="1"/>
+                            <field name="cta_text" readonly="1"/>
+                        </group>
+                    </group>
+
                     <group string="Xem trước" invisible="not cdn_url">
                         <field name="preview_html" nolabel="1" colspan="2"/>
                     </group>
-                    <group string="Metadata">
+                    <group string="Metadata" col="4">
                         <field name="duration" readonly="1"/>
                         <field name="width" readonly="1"/>
                         <field name="height" readonly="1"/>
@@ -134,7 +149,13 @@
                 <field name="name"/>
                 <field name="filename"/>
                 <field name="storage_id"/>
+                <field name="source_image_id"/>
                 <field name="state"/>
+                <separator/>
+                <filter name="filter_affiliate" string="Affiliate Image Videos"
+                        domain="[('source_type', '=', 'affiliate_image')]"/>
+                <filter name="filter_raw_source" string="Raw Video Source"
+                        domain="[('source_type', '=', 'raw_video')]"/>
                 <separator/>
                 <filter name="filter_generated" string="Generated"
                         domain="[('generated', '=', True)]"/>
@@ -151,6 +172,8 @@
                 <filter name="filter_not_posted" string="Chưa đăng"
                         domain="[('is_posted', '=', False)]"/>
                 <group expand="0" string="Group By">
+                    <filter name="groupby_source_type" string="Nguồn tạo"
+                            context="{'group_by': 'source_type'}"/>
                     <filter name="groupby_generated" string="Generated"
                             context="{'group_by': 'generated'}"/>
                     <filter name="groupby_state" string="Status"
@@ -181,8 +204,9 @@
                 Chưa có video generate.
             </p>
             <p>
-                Mở một video trong Library → bấm <b>Generate Video</b> để tạo video output.
+                Mở một video trong Library hoặc một ảnh trong Kho Ảnh Sản Phẩm → bấm <b>Tạo Video</b> để tạo video TikTok 9:16.
             </p>
         </field>
     </record>
 </odoo>
+

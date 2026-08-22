@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_audio_library_bulk_wizard_form" model="ir.ui.view">
+        <field name="name">audio.library.bulk.wizard.form</field>
+        <field name="model">audio.library.bulk.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Tải Lên Hàng Loạt File Âm Thanh">
+                <group>
+                    <group>
+                        <field name="storage_id" options="{'no_create': True}"/>
+                    </group>
+                </group>
+                <div class="alert alert-info" role="alert">
+                    Hệ thống sẽ tự động giải nén/tải lên R2 và <b>tự động phân tích Beat (Onset Energy &amp; BPM)</b> cho từng file âm thanh để sẵn sàng ghép video TikTok Affiliate.
+                </div>
+                <notebook>
+                    <page string="Chọn Danh Sách File MP3/WAV/AAC" name="page_attachments">
+                        <field name="attachment_ids" widget="many2many_binary" string="Kéo thả hoặc bấm để chọn nhiều file audio"/>
+                    </page>
+                    <page string="Hoặc Tải Lên File ZIP Chứa Nhạc" name="page_zip">
+                        <group>
+                            <field name="zip_file" filename="zip_filename"/>
+                            <field name="zip_filename" invisible="1"/>
+                        </group>
+                    </page>
+                </notebook>
+                <footer>
+                    <button name="action_process_upload"
+                            string="Bắt Đầu Tải Lên &amp; Phân Tích Beat"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Hủy" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_audio_library_bulk_wizard" model="ir.actions.act_window">
+        <field name="name">Bulk Upload Audio</field>
+        <field name="res_model">audio.library.bulk.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

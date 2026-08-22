@@ -10,6 +10,18 @@
               parent="menu_video_automation_root"
               sequence="10"/>
 
+    <menuitem id="menu_va_product_image"
+              name="Kho Ảnh Sản Phẩm"
+              parent="menu_va_library"
+              action="action_product_image"
+              sequence="5"/>
+
+    <menuitem id="menu_va_product_image_bulk"
+              name="Bulk Upload Ảnh"
+              parent="menu_va_library"
+              action="action_product_image_bulk_wizard"
+              sequence="6"/>
+
     <menuitem id="menu_va_video_library"
               name="Videos"
               parent="menu_va_library"
@@ -27,6 +39,19 @@
               parent="menu_va_library"
               action="action_audio_library"
               sequence="20"/>
+
+    <menuitem id="menu_va_audio_library_bulk"
+              name="Bulk Upload Audio"
+              parent="menu_va_library"
+              action="action_audio_library_bulk_wizard"
+              sequence="21"/>
+
+    <menuitem id="menu_va_video_generate_job"
+              name="Render Jobs"
+              parent="menu_va_library"
+
+              action="action_video_generate_job"
+              sequence="25"/>
 
     <menuitem id="menu_va_tiktok"
               name="TikTok"
@@ -75,3 +100,4 @@
               action="action_tiktok_app"
               sequence="20"/>
 </odoo>
+

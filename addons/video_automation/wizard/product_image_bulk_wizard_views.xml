@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_image_bulk_wizard_form" model="ir.ui.view">
+        <field name="name">product.image.bulk.wizard.form</field>
+        <field name="model">product.image.bulk.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Tải Lên Hàng Loạt Ảnh Sản Phẩm">
+                <group>
+                    <group>
+                        <field name="storage_id" options="{'no_create': True}"/>
+                    </group>
+                    <group>
+                        <field name="default_hook" placeholder="VD: Mẫu này đang cực hot 🔥"/>
+                        <field name="default_cta" placeholder="VD: Xem sản phẩm bên dưới ↓"/>
+                    </group>
+                </group>
+                <notebook>
+                    <page string="Chọn Danh Sách File Ảnh" name="page_attachments">
+                        <field name="attachment_ids" widget="many2many_binary" string="Kéo thả hoặc bấm để chọn nhiều ảnh"/>
+                    </page>
+                    <page string="Hoặc Tải Lên File ZIP" name="page_zip">
+                        <group>
+                            <field name="zip_file" filename="zip_filename"/>
+                            <field name="zip_filename" invisible="1"/>
+                        </group>
+                    </page>
+                </notebook>
+                <footer>
+                    <button name="action_process_upload"
+                            string="Bắt Đầu Tải Lên R2"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Hủy" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_product_image_bulk_wizard" model="ir.actions.act_window">
+        <field name="name">Bulk Upload Ảnh Sản Phẩm</field>
+        <field name="res_model">product.image.bulk.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

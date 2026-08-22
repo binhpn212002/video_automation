@@ -3,10 +3,14 @@ access_video_storage_user,video.storage user,model_video_storage,group_video_aut
 access_video_storage_manager,video.storage manager,model_video_storage,group_video_automation_manager,1,1,1,1
 access_tiktok_app_user,tiktok.app user,model_tiktok_app,group_video_automation_user,1,0,0,0
 access_tiktok_app_manager,tiktok.app manager,model_tiktok_app,group_video_automation_manager,1,1,1,1
+access_product_image_user,product.image user,model_product_image,group_video_automation_user,1,1,1,0
+access_product_image_manager,product.image manager,model_product_image,group_video_automation_manager,1,1,1,1
 access_video_library_user,video.library user,model_video_library,group_video_automation_user,1,1,1,0
 access_video_library_manager,video.library manager,model_video_library,group_video_automation_manager,1,1,1,1
 access_audio_library_user,audio.library user,model_audio_library,group_video_automation_user,1,1,1,0
 access_audio_library_manager,audio.library manager,model_audio_library,group_video_automation_manager,1,1,1,1
+access_video_generate_job_user,video.generate.job user,model_video_generate_job,group_video_automation_user,1,1,1,0
+access_video_generate_job_manager,video.generate.job manager,model_video_generate_job,group_video_automation_manager,1,1,1,1
 access_tiktok_account_user,tiktok.account user,model_tiktok_account,group_video_automation_user,1,1,1,0
 access_tiktok_account_manager,tiktok.account manager,model_tiktok_account,group_video_automation_manager,1,1,1,1
 access_tiktok_schedule_rule_user,tiktok.schedule.rule user,model_tiktok_schedule_rule,group_video_automation_user,1,1,1,0
@@ -21,5 +25,11 @@ access_video_extract_audio_wizard_user,video.extract.audio.wizard user,model_vid
 access_video_extract_audio_wizard_manager,video.extract.audio.wizard manager,model_video_extract_audio_wizard,group_video_automation_manager,1,1,1,1
 access_video_generate_wizard_user,video.generate.wizard user,model_video_generate_wizard,group_video_automation_user,1,1,1,1
 access_video_generate_wizard_manager,video.generate.wizard manager,model_video_generate_wizard,group_video_automation_manager,1,1,1,1
+access_product_image_bulk_wizard_user,product.image.bulk.wizard user,model_product_image_bulk_wizard,group_video_automation_user,1,1,1,1
+access_product_image_bulk_wizard_manager,product.image.bulk.wizard manager,model_product_image_bulk_wizard,group_video_automation_manager,1,1,1,1
+access_audio_library_bulk_wizard_user,audio.library.bulk.wizard user,model_audio_library_bulk_wizard,group_video_automation_user,1,1,1,1
+access_audio_library_bulk_wizard_manager,audio.library.bulk.wizard manager,model_audio_library_bulk_wizard,group_video_automation_manager,1,1,1,1
 access_tiktok_publish_wizard_user,tiktok.publish.wizard user,model_tiktok_publish_wizard,group_video_automation_user,1,1,1,1
 access_tiktok_publish_wizard_manager,tiktok.publish.wizard manager,model_tiktok_publish_wizard,group_video_automation_manager,1,1,1,1
+
+

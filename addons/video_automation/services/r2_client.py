@@ -34,10 +34,15 @@ class R2Client:
 
     def __init__(self, storage):
         self.storage = storage
-        self.bucket = storage.bucket_name
+        self.bucket = (storage.bucket_name or "").strip()
+        endpoint = (storage.endpoint or "").rstrip("/")
+        # If user included bucket name at the end of endpoint (e.g. https://...r2.cloudflarestorage.com/clothes), strip it
+        if self.bucket and endpoint.endswith(f"/{self.bucket}"):
+            endpoint = endpoint[: -len(f"/{self.bucket}")].rstrip("/")
+        self.endpoint = endpoint
         self.client = boto3.client(
             "s3",
-            endpoint_url=storage.endpoint,
+            endpoint_url=self.endpoint,
             aws_access_key_id=storage.access_key_id,
             aws_secret_access_key=storage.secret_key,
             config=Config(signature_version="s3v4"),
@@ -63,29 +68,45 @@ class R2Client:
         if key.startswith("http://") or key.startswith("https://"):
             parsed = urlparse(key)
             key = (parsed.path or "").lstrip("/")
-            bucket = (self.bucket or "").strip()
-            if bucket and key.startswith(bucket + "/"):
-                key = key[len(bucket) + 1 :]
         return key.lstrip("/")
 
     def resolve_object_key(self, object_key):
         """
-        Find an existing R2 key. Tries stored path, basename, and video/audio prefixes.
-        Older uploads may live at bucket root; newer ones under video/ or audio/.
+        Find an existing R2 key in bucket.
+        Tries exact stored key, with/without bucket prefix, basename, and type folders.
         """
         key = self.normalize_object_key(object_key)
         if not key:
             raise FileNotFoundError("Empty object key")
 
-        base = key.split("/")[-1]
+        bucket = self.bucket
         candidates = [key]
+
+        # If key contains bucket prefix (e.g. clothes/audio/...) try without it
+        if bucket and key.startswith(bucket + "/"):
+            candidates.append(key[len(bucket) + 1 :])
+        elif bucket:
+            candidates.append(f"{bucket}/{key}")
+
+        base = key.split("/")[-1]
         if base and base != key:
             candidates.append(base)
+            if bucket:
+                candidates.append(f"{bucket}/{base}")
+
         lower = base.lower()
         if lower.endswith((".mp4", ".mov", ".webm", ".mkv")) or base.startswith(("v_", "g_")):
             candidates.append(f"video/{base}")
+            if bucket:
+                candidates.append(f"{bucket}/video/{base}")
         if lower.endswith((".mp3", ".m4a", ".aac", ".wav")) or base.startswith("a_"):
             candidates.append(f"audio/{base}")
+            if bucket:
+                candidates.append(f"{bucket}/audio/{base}")
+        if lower.endswith((".jpg", ".jpeg", ".png", ".webp")) or base.startswith("i_"):
+            candidates.append(f"img/{base}")
+            if bucket:
+                candidates.append(f"{bucket}/img/{base}")
 
         seen = set()
         last_error = None
@@ -97,10 +118,10 @@ class R2Client:
                 self.client.head_object(Bucket=self.bucket, Key=cand)
                 if cand != key:
                     _logger.warning(
-                        "R2 key %r missing in %s; using %r",
+                        "R2 key %r found as %r in bucket %s",
                         key,
-                        self.bucket,
                         cand,
+                        self.bucket,
                     )
                 return cand
             except ClientError as exc:
@@ -127,31 +148,18 @@ class R2Client:
     def cdn_url(self, object_key):
         """
         Build public URL for object.
-
-        - Custom CDN / r2.dev: https://cdn.example.com/{key}
-        - R2 S3 endpoint as base: https://<account>.r2.cloudflarestorage.com/{bucket}/{key}
+        - Uses storage CDN domain + object key
         """
         domain = (self.storage.cdn_domain or "").rstrip("/")
         key = (object_key or "").lstrip("/")
-        bucket = (self.bucket or "").strip()
+        if not key:
+            return False
+
+        if key.startswith("http://") or key.startswith("https://"):
+            return key
 
         if not domain.startswith("http://") and not domain.startswith("https://"):
             domain = f"https://{domain}"
 
-        parsed = urlparse(domain)
-        host = (parsed.hostname or "").lower()
-        path = (parsed.path or "").rstrip("/")
-
-        # S3 API host without bucket in path → insert bucket
-        if host.endswith(".r2.cloudflarestorage.com") and bucket:
-            path_parts = [p for p in path.split("/") if p]
-            if not path_parts or path_parts[0] != bucket:
-                path = f"/{bucket}"
-            else:
-                path = "/" + "/".join(path_parts)
-            return f"{parsed.scheme}://{host}{path}/{key}"
-
-        # Custom domain / r2.dev public URL — key only
-        if path:
-            return f"{domain}/{key}"
         return f"{domain}/{key}"
+

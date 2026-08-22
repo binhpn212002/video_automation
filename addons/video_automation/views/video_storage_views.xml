@@ -5,15 +5,22 @@
         <field name="model">video.storage</field>
         <field name="arch" type="xml">
             <tree decoration-danger="pool_status == 'critical'"
-                  decoration-warning="pool_status == 'warning'">
+                  decoration-warning="pool_status == 'warning'"
+                  string="R2 Storage">
                 <field name="name"/>
                 <field name="bucket_name"/>
                 <field name="cdn_domain"/>
-                <field name="pool_available_count"/>
-                <field name="pool_needed"/>
-                <field name="pool_status"/>
-                <field name="auto_top_up"/>
-                <field name="active"/>
+                <field name="pool_available_count" string="Pool Video"/>
+                <field name="pool_raw_count" string="Raw Video"/>
+                <field name="pool_images_pending_count" string="Ảnh Chưa Gen"/>
+                <field name="pool_images_generated_count" string="Ảnh Đã Gen"/>
+                <field name="pool_needed" string="Cần Chuẩn Bị"/>
+                <field name="pool_status" widget="badge"
+                       decoration-success="pool_status == 'ok'"
+                       decoration-warning="pool_status == 'warning'"
+                       decoration-danger="pool_status == 'critical'"/>
+                <field name="auto_top_up" widget="boolean_toggle"/>
+                <field name="active" widget="boolean_toggle"/>
             </tree>
         </field>
     </record>
@@ -22,9 +29,9 @@
         <field name="name">video.storage.form</field>
         <field name="model">video.storage</field>
         <field name="arch" type="xml">
-            <form>
+            <form string="Cấu Hình R2 Storage &amp; Pool">
                 <header>
-                    <button name="action_top_up_pool" type="object" string="Gen bù pool"
+                    <button name="action_top_up_pool" type="object" string="Gen bù pool ngay"
                             class="btn-primary"
                             invisible="not auto_top_up"/>
                     <field name="pool_status" widget="statusbar"
@@ -32,34 +39,34 @@
                 </header>
                 <sheet>
                     <group>
-                        <group>
+                        <group string="Cấu Hình Cloudflare R2">
                             <field name="name"/>
                             <field name="account_id"/>
                             <field name="bucket_name"/>
-                            <field name="active"/>
-                            <field name="buffer_days"/>
-                            <field name="auto_top_up"/>
-                            <field name="max_gen_per_run"/>
-                        </group>
-                        <group>
                             <field name="endpoint"
                                     placeholder="https://&lt;account_id&gt;.r2.cloudflarestorage.com"/>
                             <field name="cdn_domain"
                                     placeholder="https://pub-xxxx.r2.dev"/>
                             <field name="access_key_id" password="True"/>
                             <field name="secret_key" password="True"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Auto Top-Up &amp; Thống Kê Pool">
+                            <field name="buffer_days"/>
+                            <field name="auto_top_up" widget="boolean_toggle"/>
+                            <field name="auto_gen_from_images" widget="boolean_toggle"/>
+                            <field name="max_gen_per_run"/>
                             <field name="slots_per_day"/>
-                            <field name="pool_available_count"/>
                             <field name="pool_needed"/>
+                            <field name="pool_available_count"/>
                             <field name="pool_raw_count"/>
-                            <div class="text-muted" colspan="2">
-                                CDN URL = CDN Domain + / + path
-                                Video: https://pub-xxxx.r2.dev/video/v_3_....mp4
-                                Audio: https://pub-xxxx.r2.dev/audio/a_....mp3
-                                Pool cần = slot/ngày (các account dùng bucket này) × buffer ngày.
-                            </div>
+                            <field name="pool_images_pending_count"/>
+                            <field name="pool_images_generated_count"/>
                         </group>
                     </group>
+                    <div class="alert alert-info" role="alert">
+                        <strong>Cơ chế Auto Top-Up:</strong> Khi pool video sẵn sàng thấp hơn số lượng cần, hệ thống sẽ ưu tiên sinh video từ Video Raw trước, sau đó tự động lấy tiếp từ <b>Kho Ảnh Sản Phẩm chưa gen (FIFO)</b> để bù đủ buffer cho lịch đăng.
+                    </div>
                 </sheet>
                 <div class="oe_chatter">
                     <field name="message_follower_ids"/>
@@ -75,3 +82,4 @@
         <field name="view_mode">tree,form</field>
     </record>
 </odoo>
+

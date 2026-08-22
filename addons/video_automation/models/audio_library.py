@@ -1,4 +1,5 @@
 import base64
+import json
 import logging
 import mimetypes
 import os
@@ -8,7 +9,7 @@ import tempfile
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.ffmpeg_service import probe_media
+from ..services.ffmpeg_service import detect_beats, probe_media
 from ..services.r2_client import R2Client, make_flat_object_key
 
 _logger = logging.getLogger(__name__)
@@ -50,6 +51,24 @@ class AudioLibrary(models.Model):
         string="Source Video",
         ondelete="set null",
         help="Video mà audio này được extract từ đó.",
+    )
+
+    beat_data = fields.Text(
+        string="Beat Timestamps (JSON)",
+        help="Danh sách timestamps mốc nhịp âm thanh để đồng bộ hiệu ứng (VD: [0.5, 1.1, ...])",
+    )
+    bpm = fields.Float(
+        string="BPM",
+        help="Tốc độ nhịp ước tính (Beats Per Minute)",
+    )
+    beat_status = fields.Selection(
+        [
+            ("none", "Chưa phân tích"),
+            ("detected", "Đã nhận diện Beat"),
+            ("fallback", "Fallback (Nhịp đều)"),
+        ],
+        default="none",
+        string="Trạng thái Beat",
     )
 
     @api.depends("storage_id", "storage_id.cdn_domain", "storage_id.bucket_name", "storage_path")
@@ -96,16 +115,101 @@ class AudioLibrary(models.Model):
                 fh.write(base64.b64decode(self.upload_file))
             client.upload_file(local_path, object_key, content_type=content_type)
             meta = probe_media(local_path)
+            
+            # Analyze beats immediately on upload
+            beats, bpm, status = detect_beats(local_path)
+            
             self.write(
                 {
                     "filename": object_key,
                     "storage_path": object_key,
                     "duration": meta["duration"],
                     "file_size": meta["file_size"] or os.path.getsize(local_path),
+                    "beat_data": json.dumps(beats),
+                    "bpm": bpm,
+                    "beat_status": status,
                     "upload_file": False,
                     "upload_filename": False,
                 }
             )
-            self.message_post(body=f"Uploaded to R2: {object_key}")
+            self.message_post(body=f"Uploaded to R2: {object_key} (BPM: {bpm}, Beats: {len(beats)})")
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
+
+    def action_analyze_beats(self):
+        """Phân tích nhịp âm thanh và lưu cache timestamps."""
+        for audio in self:
+            audio._analyze_beats()
+        return True
+
+    def _analyze_beats(self):
+        self.ensure_one()
+        if not self.storage_id or not self.storage_path:
+            raise UserError("File âm thanh chưa có trên R2.")
+
+        client = R2Client(self.storage_id)
+        work_dir = _make_workdir("va_beat_")
+        local_path = os.path.join(work_dir, "audio.mp3")
+        try:
+            client.download_file(self.storage_path, local_path)
+            beats, bpm, status = detect_beats(local_path)
+            self.write(
+                {
+                    "beat_data": json.dumps(beats),
+                    "bpm": bpm,
+                    "beat_status": status,
+                }
+            )
+            self.message_post(
+                body=f"Đã phân tích beat: <b>{len(beats)} beats</b>, BPM: <b>{bpm}</b>, Trạng thái: <b>{status}</b>"
+            )
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+    def get_or_compute_beats(self, storage=None, audio_local_path=None):
+        """
+        Lấy danh sách timestamps nhịp từ cache hoặc tính toán trực tiếp.
+        Returns: list[float]
+        """
+        self.ensure_one()
+        if self.beat_data:
+            try:
+                data = json.loads(self.beat_data)
+                if isinstance(data, list) and len(data) > 0:
+                    return data
+            except Exception:
+                pass
+
+        if audio_local_path and os.path.exists(audio_local_path):
+            beats, bpm, status = detect_beats(audio_local_path)
+            self.write(
+                {
+                    "beat_data": json.dumps(beats),
+                    "bpm": bpm,
+                    "beat_status": status,
+                }
+            )
+            return beats
+
+        # Download from R2 if needed
+        storage = storage or self.storage_id
+        if not storage or not self.storage_path:
+            return []
+
+        client = R2Client(storage)
+        work_dir = _make_workdir("va_beat_get_")
+        local_path = os.path.join(work_dir, "audio.mp3")
+        try:
+            client.download_file(self.storage_path, local_path)
+            beats, bpm, status = detect_beats(local_path)
+            self.write(
+                {
+                    "beat_data": json.dumps(beats),
+                    "bpm": bpm,
+                    "beat_status": status,
+                }
+            )
+            return beats
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+

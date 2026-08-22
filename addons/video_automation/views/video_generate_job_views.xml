@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="view_video_generate_job_tree" model="ir.ui.view">
+        <field name="name">video.generate.job.tree</field>
+        <field name="model">video.generate.job</field>
+        <field name="arch" type="xml">
+            <tree string="Tiến Trình Render Video"
+                  decoration-info="state == 'draft'"
+                  decoration-warning="state == 'processing'"
+                  decoration-success="state == 'completed'"
+                  decoration-danger="state == 'failed'">
+                <field name="name"/>
+                <field name="image_id"/>
+                <field name="audio_id"/>
+                <field name="effect_preset"/>
+                <field name="duration" widget="float_time"/>
+                <field name="create_date" string="Thời Gian Tạo"/>
+                <field name="finish_date" string="Hoàn Thành"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-warning="state == 'processing'"
+                       decoration-success="state == 'completed'"
+                       decoration-danger="state == 'failed'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_video_generate_job_form" model="ir.ui.view">
+        <field name="name">video.generate.job.form</field>
+        <field name="model">video.generate.job</field>
+        <field name="arch" type="xml">
+            <form string="Chi Tiết Job Render Video">
+                <header>
+                    <button name="action_run_job"
+                            type="object"
+                            string="Thực Thi Job"
+                            class="btn-primary"
+                            invisible="state == 'completed'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,processing,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Mã Job"/>
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Nguồn &amp; Cấu Hình">
+                            <field name="image_id" options="{'no_create': True}"/>
+                            <field name="audio_id" options="{'no_create': True}"/>
+                            <field name="storage_id" readonly="1"/>
+                            <field name="effect_preset"/>
+                            <field name="flash_effect"/>
+                        </group>
+                        <group string="Nội Dung &amp; Text">
+                            <field name="hook_text"/>
+                            <field name="cta_text"/>
+                            <field name="create_date" readonly="1"/>
+                            <field name="finish_date" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Kết Quả Render" invisible="state != 'completed'">
+                        <field name="video_id" readonly="1"/>
+                        <field name="video_url" widget="url" readonly="1"/>
+                        <field name="duration" readonly="1"/>
+                    </group>
+
+                    <div invisible="not error_message" class="alert alert-danger" role="alert">
+                        <strong>Lỗi: </strong><field name="error_message" readonly="1"/>
+                    </div>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Main Action -->
+    <record id="action_video_generate_job" model="ir.actions.act_window">
+        <field name="name">Tiến Trình Tạo Video (Jobs)</field>
+        <field name="res_model">video.generate.job</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Danh sách các Job tạo Video (REST API và Background).
+            </p>
+        </field>
+    </record>
+</odoo>
