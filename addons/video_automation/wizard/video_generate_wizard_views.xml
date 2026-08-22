@@ -10,16 +10,18 @@
                         <field name="image_id" readonly="1"/>
                         <field name="audio_id" options="{'no_create': True}"
                                placeholder="Để trống = tự động chọn nhạc ít dùng"/>
+                        <field name="max_duration"/>
                         <field name="output_name" placeholder="Tên video thành phẩm (tùy chọn)"/>
                     </group>
                     <group string="Cấu Hình Hiệu Ứng &amp; Text">
+                        <field name="motion_effect"/>
                         <field name="effect_preset"/>
                         <field name="hook_text" placeholder="VD: Mẫu này đang cực hot 🔥"/>
                         <field name="cta_text" placeholder="VD: Xem sản phẩm bên dưới ↓"/>
                     </group>
                 </group>
                 <div class="alert alert-info" role="alert">
-                    Tạo <b>Video TikTok 9:16</b> (1080x1920, 30 FPS) từ ảnh sản phẩm với hiệu ứng Beat Pulse, White Flash, Background Blur và Safe Area Text.
+                    Tạo <b>Video TikTok 9:16</b> (1080x1920, 30 FPS) từ ảnh sản phẩm với hiệu ứng <b>Ken Burns Zoom</b>, <b>Beat Bounce</b>, <b>Beat Pulse &amp; White Flash</b>, Background Blur và Safe Area Text.
                 </div>
                 <footer>
                     <button name="action_generate" type="object" string="Bắt Đầu Tạo Video"

@@ -84,6 +84,7 @@
 
                     <group string="Cấu Hình Nội Dung &amp; Hiệu Ứng" invisible="source_type != 'affiliate_image'">
                         <group>
+                            <field name="motion_effect" readonly="1"/>
                             <field name="effect_preset" readonly="1"/>
                         </group>
                         <group>

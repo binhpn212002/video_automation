@@ -244,13 +244,16 @@ class ProductImage(models.Model):
         self,
         audio=None,
         effect_preset="normal",
+        motion_effect="zoom_bounce",
         hook_text=None,
         cta_text=None,
         output_name=None,
+        max_duration=25.0,
     ):
         """
         Sinh video TikTok Affiliate 9:16 (1080x1920, 30 FPS) từ ảnh này và file MP3.
-        Không crop/zoom/stretch foreground. Tạo hiệu ứng Beat Pulse + White Flash + Safe Area text.
+        Áp dụng Ken Burns (Slow Zoom), Beat Bounce, Beat Pulse + White Flash + Safe Area text.
+        Thời lượng mặc định tối đa 25s (nếu bài nhạc dài hơn 25s sẽ tự động cắt ngắn lại).
         """
         self.ensure_one()
         if not self.storage_id or not self.storage_path:
@@ -284,6 +287,7 @@ class ProductImage(models.Model):
                 "hook_text": hook,
                 "cta_text": cta,
                 "effect_preset": effect_preset,
+                "motion_effect": motion_effect or "zoom_bounce",
                 "state": "processing",
                 "generated": False,
                 "allow_republish": True,
@@ -304,15 +308,17 @@ class ProductImage(models.Model):
             # Lấy beats cache hoặc tính toán
             beats = audio.get_or_compute_beats(audio_local_path=audio_local)
 
-            # Render 1-Pass FFmpeg
+            # Render 1-Pass FFmpeg (kèm Ken Burns + Beat Bounce, cắt tối đa max_duration)
             generate_affiliate_video(
                 image_path=image_local,
                 audio_path=audio_local,
                 output_path=output_local,
                 beat_data=beats,
                 effect_preset=effect_preset,
+                motion_effect=motion_effect,
                 hook_text=hook,
                 cta_text=cta,
+                max_duration=max_duration or 25.0,
             )
 
             # Upload video kết quả lên R2
@@ -353,7 +359,7 @@ class ProductImage(models.Model):
                 )
             )
             child.message_post(
-                body=f"Tạo từ ảnh sản phẩm <b>{self.name}</b> + nhạc <b>{audio.name}</b> (Effect: {effect_preset})."
+                body=f"Tạo từ ảnh sản phẩm <b>{self.name}</b> + nhạc <b>{audio.name}</b> (Motion: {motion_effect}, Pulse: {effect_preset})."
             )
             return child
 

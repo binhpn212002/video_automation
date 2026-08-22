@@ -47,8 +47,20 @@ class VideoGenerateJob(models.Model):
         default="normal",
         string="Hiệu ứng Beat Pulse",
     )
+    motion_effect = fields.Selection(
+        [
+            ("zoom_bounce", "Ken Burns + Beat Bounce"),
+            ("zoom_in", "Slow Zoom In"),
+            ("zoom_out", "Slow Zoom Out"),
+            ("bounce_only", "Beat Bounce Only"),
+            ("none", "None (Static)"),
+        ],
+        default="zoom_bounce",
+        string="Hiệu ứng Motion",
+    )
     hook_text = fields.Char(string="Hook Text")
     cta_text = fields.Char(string="CTA Text")
+    max_duration = fields.Float(string="Thời lượng tối đa (s)", default=25.0)
     flash_effect = fields.Boolean(string="White Flash", default=True)
 
     state = fields.Selection(
@@ -100,8 +112,10 @@ class VideoGenerateJob(models.Model):
                 video = job.image_id.generate_affiliate_video(
                     audio=job.audio_id or None,
                     effect_preset=job.effect_preset or "normal",
+                    motion_effect=job.motion_effect or "zoom_bounce",
                     hook_text=job.hook_text,
                     cta_text=job.cta_text,
+                    max_duration=job.max_duration or 25.0,
                 )
                 job.write(
                     {

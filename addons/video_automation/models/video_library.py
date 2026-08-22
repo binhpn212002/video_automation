@@ -98,6 +98,17 @@ class VideoLibrary(models.Model):
         default="normal",
         string="Cường độ Beat Pulse",
     )
+    motion_effect = fields.Selection(
+        [
+            ("zoom_bounce", "Ken Burns (Zoom In) + Beat Bounce 🔥"),
+            ("zoom_in", "Slow Zoom In (Phóng to nhẹ)"),
+            ("zoom_out", "Slow Zoom Out (Thu nhỏ nhẹ)"),
+            ("bounce_only", "Chỉ Beat Bounce (Nảy theo nhịp)"),
+            ("none", "Tĩnh (Không chuyển động)"),
+        ],
+        default="zoom_bounce",
+        string="Hiệu ứng Chuyển động",
+    )
     original_storage_path = fields.Char(
         string="Original Path",
         help="Đường dẫn video gốc trên R2 (trước khi generate).",

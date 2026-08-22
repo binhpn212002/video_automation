@@ -13,6 +13,7 @@
                 <field name="name"/>
                 <field name="image_id"/>
                 <field name="audio_id"/>
+                <field name="motion_effect"/>
                 <field name="effect_preset"/>
                 <field name="duration" widget="float_time"/>
                 <field name="create_date" string="Thời Gian Tạo"/>
@@ -52,6 +53,7 @@
                             <field name="image_id" options="{'no_create': True}"/>
                             <field name="audio_id" options="{'no_create': True}"/>
                             <field name="storage_id" readonly="1"/>
+                            <field name="motion_effect"/>
                             <field name="effect_preset"/>
                             <field name="flash_effect"/>
                         </group>

@@ -38,8 +38,10 @@ class AffiliateApiController(http.Controller):
                 )
 
             audio_id = body.get("audio_id")
+            max_duration = float(body.get("max_duration") or 25.0)
             effect_cfg = body.get("effect") or {}
             effect_preset = effect_cfg.get("preset", "normal")
+            motion_effect = effect_cfg.get("motion") or body.get("motion_effect") or "zoom_bounce"
             flash_effect = effect_cfg.get("flash", True)
 
             text_cfg = body.get("text") or {}
@@ -52,7 +54,9 @@ class AffiliateApiController(http.Controller):
                 {
                     "image_id": image.id,
                     "audio_id": int(audio_id) if audio_id else False,
+                    "max_duration": max_duration,
                     "effect_preset": effect_preset,
+                    "motion_effect": motion_effect,
                     "flash_effect": flash_effect,
                     "hook_text": hook_text or image.default_hook or "",
                     "cta_text": cta_text or image.default_cta or "",

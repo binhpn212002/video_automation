@@ -258,39 +258,48 @@ def generate_affiliate_video(
     output_path,
     beat_data=None,
     effect_preset="normal",
+    motion_effect="zoom_bounce",
     hook_text=None,
     cta_text=None,
     font_path=None,
     audio_duration=None,
+    max_duration=25.0,
 ):
     """
     Render video TikTok Affiliate 9:16 (1080x1920, 30 FPS) trong duy nhất 1-Pass Filter Complex.
     1. Background: Scale cover 1080x1920 + BoxBlur (r=25:p=2).
-    2. Foreground: Scale contain 1080x1920 + Center overlay (100% không crop/zoom/stretch).
+    2. Foreground: Scale contain + Motion (Ken Burns slow zoom & Beat Bounce dynamic scale).
     3. Beat Pulse: Dynamic Brightness/Contrast timeline.
     4. White Flash: Flash overlay tại các beat timestamps.
     5. Hook: Top safe area text (0s -> 2.5s) kèm viền đen.
     6. CTA: Bottom safe area text (cuối video) kèm viền đen.
-    7. Mux Audio AAC + Video H.264 (30 FPS, yuv420p, CRF 22).
+    7. Mux Audio AAC (Fade Out cuối) + Video H.264 (30 FPS, yuv420p, CRF 22).
+    Thời lượng video mặc định là 25s (nếu nhạc dài hơn 25s sẽ tự động cắt ngắn lại).
     """
-    if audio_duration is None:
-        meta = probe_media(audio_path)
-        audio_duration = float(meta.get("duration") or 15.0)
+    meta = probe_media(audio_path)
+    real_audio_dur = float(meta.get("duration") or 25.0)
+
+    if audio_duration is not None and float(audio_duration) > 0:
+        audio_duration = float(audio_duration)
+    elif max_duration is not None and float(max_duration) > 0:
+        audio_duration = min(real_audio_dur, float(max_duration))
+    else:
+        audio_duration = min(real_audio_dur, 25.0)
 
     if beat_data is None:
         beats, _, _ = detect_beats(audio_path)
     else:
         beats = beat_data
 
-    # Preset settings
+    # Preset settings (pulse brightness, contrast, white flash, bounce amplitude)
     preset_configs = {
-        "soft": {"bright": 0.03, "contrast": 1.02, "flash": 0.05, "dur": 0.08},
-        "normal": {"bright": 0.07, "contrast": 1.05, "flash": 0.10, "dur": 0.10},
-        "strong": {"bright": 0.12, "contrast": 1.08, "flash": 0.15, "dur": 0.13},
+        "soft": {"bright": 0.03, "contrast": 1.02, "flash": 0.05, "dur": 0.08, "bounce": 0.03},
+        "normal": {"bright": 0.07, "contrast": 1.05, "flash": 0.10, "dur": 0.10, "bounce": 0.06},
+        "strong": {"bright": 0.12, "contrast": 1.08, "flash": 0.15, "dur": 0.13, "bounce": 0.09},
     }
     cfg = preset_configs.get(effect_preset, preset_configs["normal"])
 
-    # Build beat timeline enable expression
+    # Build beat timeline enable expression for brightness/contrast & flash
     pulse_dur = cfg["dur"]
     enable_terms = []
     for b in beats:
@@ -302,9 +311,46 @@ def generate_affiliate_video(
     # Base filtergraph steps
     filter_steps = [
         "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=25:2[bg]",
-        "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg]",
-        "[bg][fg]overlay=(W-w)/2:(H-h)/2[base]",
     ]
+
+    # Handle motion effect: Ken Burns + Beat Bounce
+    motion = motion_effect or "zoom_bounce"
+    if motion == "none":
+        filter_steps.extend([
+            "[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[fg]",
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2[base]",
+        ])
+    else:
+        # Determine Ken Burns Zoom curve
+        if motion in ("zoom_bounce", "zoom_in"):
+            ken_expr = f"1.0+0.07*(t/{audio_duration:.2f})"
+        elif motion == "zoom_out":
+            ken_expr = f"1.07-0.07*(t/{audio_duration:.2f})"
+        else:
+            ken_expr = "1.0"
+
+        # Determine Beat Bounce impulse curve
+        bounce_terms = []
+        if motion in ("zoom_bounce", "bounce_only") and beats:
+            bounce_amp = cfg["bounce"]
+            for b in beats:
+                if b < audio_duration:
+                    bounce_terms.append(
+                        f"if(between(t,{b:.2f},{(b + pulse_dur):.2f}),{bounce_amp:.2f}*(1-(t-{b:.2f})/{pulse_dur:.2f}),0)"
+                    )
+        bounce_expr = "+".join(bounce_terms) if bounce_terms else "0"
+
+        # Total scale multiplier evaluated per frame
+        total_scale = f"{ken_expr}+({bounce_expr})"
+        scale_w = f"trunc(iw*({total_scale})/2)*2"
+        scale_h = f"trunc(ih*({total_scale})/2)*2"
+
+        filter_steps.extend([
+            # Base scaled foreground leaving ~6% margin for zoom & bounce headroom
+            "[0:v]scale=980:1740:force_original_aspect_ratio=decrease[fg0]",
+            f"[fg0]scale=w='{scale_w}':h='{scale_h}':eval=frame[fg]",
+            "[bg][fg]overlay=(W-w)/2:(H-h)/2[base]",
+        ])
 
     current_v = "[base]"
 
@@ -370,6 +416,9 @@ def generate_affiliate_video(
         filter_steps.append(f"{current_v}format=yuv420p[vout]")
         filter_complex = ";".join(filter_steps)
 
+        # Audio fade out for smooth termination (0.8s)
+        audio_fade_st = max(0.0, audio_duration - 0.8)
+
         cmd = [
             "ffmpeg",
             "-y",
@@ -388,6 +437,8 @@ def generate_affiliate_video(
             "22",
             "-r",
             "30",
+            "-af",
+            f"afade=t=out:st={audio_fade_st:.2f}:d=0.8",
             "-c:a",
             "aac",
             "-b:a",
