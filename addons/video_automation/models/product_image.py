@@ -34,7 +34,7 @@ class ProductImage(models.Model):
     _order = "create_date asc, id asc"
 
     name = fields.Char(string="Tên / SKU Sản Phẩm", required=True, tracking=True)
-    storage_id = fields.Many2one("video.storage", string="R2 Storage", required=True)
+    storage_id = fields.Many2one("image.storage", string="R2 Image Storage", required=True)
     storage_path = fields.Char(string="Object Path (R2)")
     cdn_url = fields.Char(
         string="CDN URL",
@@ -138,7 +138,7 @@ class ProductImage(models.Model):
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
         if "storage_id" in fields_list and not res.get("storage_id"):
-            storage = self.env["video.storage"].search([("active", "=", True)], limit=1)
+            storage = self.env["image.storage"].search([("active", "=", True)], limit=1)
             if storage:
                 res["storage_id"] = storage.id
         return res
@@ -208,18 +208,19 @@ class ProductImage(models.Model):
             shutil.rmtree(work_dir, ignore_errors=True)
 
     @api.model
-    def _pending_image_candidates(self, storage, limit=None):
+    def _pending_image_candidates(self, storage=None, limit=None):
         """
         Lấy danh sách các ảnh sản phẩm CHƯA TỪNG ĐƯỢC GEN (generated=False)
         theo thứ tự FIFO (ảnh upload trước được tạo video trước).
         """
         domain = [
-            ("storage_id", "=", storage.id),
             ("active", "=", True),
             ("storage_path", "!=", False),
             ("generated", "=", False),
             ("state", "in", ("uploaded", "failed")),
         ]
+        if storage and getattr(storage, "_name", None) == "image.storage":
+            domain.append(("storage_id", "=", storage.id))
         return self.search(domain, order="create_date asc, id asc", limit=limit)
 
     def action_open_gen_wizard(self):
@@ -243,6 +244,7 @@ class ProductImage(models.Model):
     def generate_affiliate_video(
         self,
         audio=None,
+        video_storage=None,
         effect_preset="normal",
         motion_effect="zoom_bounce",
         hook_text=None,
@@ -262,8 +264,17 @@ class ProductImage(models.Model):
         if not self.allow_multiple_gen and self.generated:
             raise UserError(f"Ảnh '{self.name}' đã được tạo video rồi (chỉ tạo 1 lần).")
 
+        VideoStorage = self.env["video.storage"]
+        video_storage = video_storage or VideoStorage.search([("active", "=", True)], limit=1)
+        if not video_storage:
+            raise UserError("Chưa có cấu hình R2 Video Storage active để lưu video thành phẩm.")
+
         VideoLib = self.env["video.library"]
-        audio = audio or VideoLib._pick_audio(self.storage_id)
+        audio = audio or VideoLib._pick_audio(video_storage)
+        if not audio:
+            audio = self.env["audio.library"].search(
+                [("active", "=", True), ("storage_path", "!=", False)], limit=1
+            )
         if not audio:
             raise UserError("Không có file âm thanh active trên R2 để ghép nhạc.")
         if not audio.storage_path or not audio.storage_id:
@@ -276,11 +287,11 @@ class ProductImage(models.Model):
         hook = hook_text if hook_text is not None else (self.default_hook or "")
         cta = cta_text if cta_text is not None else (self.default_cta or "")
 
-        # Tạo record video.library
+        # Tạo record video.library trên video_storage
         child = VideoLib.create(
             {
                 "name": name,
-                "storage_id": self.storage_id.id,
+                "storage_id": video_storage.id,
                 "source_type": "affiliate_image",
                 "source_image_id": self.id,
                 "original_storage_path": self.storage_path,
@@ -296,6 +307,7 @@ class ProductImage(models.Model):
 
         image_client = R2Client(self.storage_id)
         audio_client = R2Client(audio.storage_id)
+        video_client = R2Client(video_storage)
         work_dir = _make_workdir("va_affgen_")
         image_local = os.path.join(work_dir, "product_image.jpg")
         audio_local = os.path.join(work_dir, "audio.mp3")
@@ -321,9 +333,9 @@ class ProductImage(models.Model):
                 max_duration=max_duration or 25.0,
             )
 
-            # Upload video kết quả lên R2
+            # Upload video kết quả lên R2 Video Storage
             object_key = make_flat_object_key("g", ".mp4", record_id=child.id)
-            image_client.upload_file(output_local, object_key, content_type="video/mp4")
+            video_client.upload_file(output_local, object_key, content_type="video/mp4")
             meta = probe_media(output_local)
 
             child.write(

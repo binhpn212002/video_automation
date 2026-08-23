@@ -33,10 +33,9 @@ class VideoGenerateJob(models.Model):
     )
     storage_id = fields.Many2one(
         "video.storage",
-        string="R2 Storage",
-        compute="_compute_storage_id",
-        store=True,
-        readonly=False,
+        string="R2 Video Storage",
+        default=lambda self: self.env["video.storage"].search([("active", "=", True)], limit=1).id,
+        help="Cấu hình R2 Video Storage để lưu video thành phẩm.",
     )
     effect_preset = fields.Selection(
         [
@@ -94,14 +93,6 @@ class VideoGenerateJob(models.Model):
     error_message = fields.Text(string="Chi tiết lỗi", readonly=True)
     finish_date = fields.Datetime(string="Thời gian hoàn thành", readonly=True)
 
-    @api.depends("image_id", "image_id.storage_id")
-    def _compute_storage_id(self):
-        for job in self:
-            if job.image_id and job.image_id.storage_id:
-                job.storage_id = job.image_id.storage_id.id
-            elif not job.storage_id:
-                job.storage_id = self.env["video.storage"].search([("active", "=", True)], limit=1).id
-
     def action_run_job(self):
         """Thực thi job render video từ ảnh + audio."""
         for job in self:
@@ -111,6 +102,7 @@ class VideoGenerateJob(models.Model):
             try:
                 video = job.image_id.generate_affiliate_video(
                     audio=job.audio_id or None,
+                    video_storage=job.storage_id or None,
                     effect_preset=job.effect_preset or "normal",
                     motion_effect=job.motion_effect or "zoom_bounce",
                     hook_text=job.hook_text,

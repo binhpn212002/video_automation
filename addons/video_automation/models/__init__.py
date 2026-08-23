@@ -1,4 +1,5 @@
 from . import video_storage
+from . import image_storage
 from . import tiktok_app
 from . import product_image
 from . import video_library

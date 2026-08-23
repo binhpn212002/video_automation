@@ -15,8 +15,8 @@ class ProductImageBulkWizard(models.TransientModel):
     _description = "Tải Lên Hàng Loạt Ảnh Sản Phẩm"
 
     storage_id = fields.Many2one(
-        "video.storage",
-        string="R2 Storage",
+        "image.storage",
+        string="R2 Image Storage",
         required=True,
     )
     attachment_ids = fields.Many2many(
@@ -42,7 +42,7 @@ class ProductImageBulkWizard(models.TransientModel):
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
         if "storage_id" in fields_list and not res.get("storage_id"):
-            storage = self.env["video.storage"].search([("active", "=", True)], limit=1)
+            storage = self.env["image.storage"].search([("active", "=", True)], limit=1)
             if storage:
                 res["storage_id"] = storage.id
         return res

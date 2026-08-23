@@ -78,7 +78,7 @@
     </record>
 
     <record id="action_video_storage" model="ir.actions.act_window">
-        <field name="name">R2 Storage</field>
+        <field name="name">R2 Video Storage</field>
         <field name="res_model">video.storage</field>
         <field name="view_mode">tree,form</field>
     </record>

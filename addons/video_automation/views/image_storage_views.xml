@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_image_storage_tree" model="ir.ui.view">
+        <field name="name">image.storage.tree</field>
+        <field name="model">image.storage</field>
+        <field name="arch" type="xml">
+            <tree string="R2 Image Storage">
+                <field name="name"/>
+                <field name="bucket_name"/>
+                <field name="cdn_domain"/>
+                <field name="total_image_count" string="Tổng Số Ảnh"/>
+                <field name="pending_image_count" string="Ảnh Chưa Gen Video"/>
+                <field name="generated_image_count" string="Ảnh Đã Gen Video"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_image_storage_form" model="ir.ui.view">
+        <field name="name">image.storage.form</field>
+        <field name="model">image.storage</field>
+        <field name="arch" type="xml">
+            <form string="Cấu Hình R2 Image Storage">
+                <header>
+                    <button name="action_rebuild_cdn_urls" type="object" string="Cập nhật lại CDN URL"
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Cấu Hình Cloudflare R2">
+                            <field name="name"/>
+                            <field name="account_id"/>
+                            <field name="bucket_name"/>
+                            <field name="endpoint"
+                                   placeholder="https://&lt;account_id&gt;.r2.cloudflarestorage.com"/>
+                            <field name="cdn_domain"
+                                   placeholder="https://pub-xxxx.r2.dev"/>
+                            <field name="access_key_id" password="True"/>
+                            <field name="secret_key" password="True"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Thống Kê Kho Ảnh">
+                            <field name="total_image_count"/>
+                            <field name="pending_image_count"/>
+                            <field name="generated_image_count"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <strong>Lưu trữ ảnh:</strong> Các file ảnh sản phẩm tải lên sẽ được lưu tại thư mục <code>image/</code> trong Cloudflare R2 bucket này.
+                    </div>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_image_storage" model="ir.actions.act_window">
+        <field name="name">R2 Image Storage</field>
+        <field name="res_model">image.storage</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>

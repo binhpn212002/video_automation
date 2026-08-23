@@ -13,20 +13,24 @@ _logger = logging.getLogger(__name__)
 
 def make_flat_object_key(kind, extension=".mp4", record_id=None):
     """
-    Object key under video/ or audio/ folder (renamed file, no deep date folders).
+    Object key under image/, video/ or audio/ folder (renamed file, no deep date folders).
     Examples:
+      image/i_3_1786012345_ab12cd.jpg
       video/v_3_1786012345_ab12cd.mp4
       video/g_3_1786012345_xy98ef.mp4
       audio/a_1786012345_cd34ef.mp3
-    kind: 'v' original video | 'g' generated | 'a' audio
+    kind: 'i' image | 'v' original video | 'g' generated video | 'a' audio
     """
     ext = extension if extension.startswith(".") else f".{extension}"
     ts = int(time.time())
     suffix = secrets.token_hex(3)
     rid = record_id or 0
-    if kind == "a":
+    if kind in ("i", "img", "image"):
+        return f"image/i_{rid}_{ts}_{suffix}{ext}"
+    if kind in ("a", "audio"):
         return f"audio/a_{ts}_{suffix}{ext}"
     return f"video/{kind}_{rid}_{ts}_{suffix}{ext}"
+
 
 
 class R2Client:
@@ -104,8 +108,12 @@ class R2Client:
             if bucket:
                 candidates.append(f"{bucket}/audio/{base}")
         if lower.endswith((".jpg", ".jpeg", ".png", ".webp")) or base.startswith("i_"):
+            candidates.append(f"image/{base}")
+            candidates.append(f"images/{base}")
             candidates.append(f"img/{base}")
             if bucket:
+                candidates.append(f"{bucket}/image/{base}")
+                candidates.append(f"{bucket}/images/{base}")
                 candidates.append(f"{bucket}/img/{base}")
 
         seen = set()

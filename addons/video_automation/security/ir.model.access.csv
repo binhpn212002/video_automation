@@ -1,6 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_video_storage_user,video.storage user,model_video_storage,group_video_automation_user,1,0,0,0
 access_video_storage_manager,video.storage manager,model_video_storage,group_video_automation_manager,1,1,1,1
+access_image_storage_user,image.storage user,model_image_storage,group_video_automation_user,1,0,0,0
+access_image_storage_manager,image.storage manager,model_image_storage,group_video_automation_manager,1,1,1,1
 access_tiktok_app_user,tiktok.app user,model_tiktok_app,group_video_automation_user,1,0,0,0
 access_tiktok_app_manager,tiktok.app manager,model_tiktok_app,group_video_automation_manager,1,1,1,1
 access_product_image_user,product.image user,model_product_image,group_video_automation_user,1,1,1,0

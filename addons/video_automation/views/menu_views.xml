@@ -83,11 +83,17 @@
               sequence="90"
               groups="video_automation.group_video_automation_manager"/>
 
-    <menuitem id="menu_va_storage"
-              name="R2 Storage"
+    <menuitem id="menu_va_video_storage"
+              name="R2 Video Storage"
               parent="menu_va_config"
               action="action_video_storage"
               sequence="10"/>
+
+    <menuitem id="menu_va_image_storage"
+              name="R2 Image Storage"
+              parent="menu_va_config"
+              action="action_image_storage"
+              sequence="15"/>
 
     <menuitem id="menu_va_tiktok_apps"
               name="TikTok Apps"

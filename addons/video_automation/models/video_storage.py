@@ -104,7 +104,6 @@ class VideoStorage(models.Model):
             if Image is not None:
                 pending_images = Image.search_count(
                     [
-                        ("storage_id", "=", storage.id),
                         ("active", "=", True),
                         ("storage_path", "!=", False),
                         ("generated", "=", False),
@@ -113,7 +112,6 @@ class VideoStorage(models.Model):
                 )
                 generated_images = Image.search_count(
                     [
-                        ("storage_id", "=", storage.id),
                         ("generated", "=", True),
                     ]
                 )
@@ -149,12 +147,12 @@ class VideoStorage(models.Model):
 
             # Generate exclusively from Pending Product Images (FIFO)
             if storage.auto_gen_from_images and Image is not None:
-                pending_imgs = Image._pending_image_candidates(storage, limit=to_make)
+                pending_imgs = Image._pending_image_candidates(limit=to_make)
                 for img in pending_imgs:
                     if made >= to_make:
                         break
                     try:
-                        child = img.generate_affiliate_video()
+                        child = img.generate_affiliate_video(video_storage=storage)
                         created |= child
                         made += 1
                     except Exception as exc:

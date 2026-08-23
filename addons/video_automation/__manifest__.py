@@ -28,6 +28,7 @@ Video Automation Auto Schedule & TikTok Affiliate Video Generator
         "data/ir_cron_data.xml",
         "data/ir_cron_topup.xml",
         "views/video_storage_views.xml",
+        "views/image_storage_views.xml",
         "views/product_image_views.xml",
         "views/tiktok_app_views.xml",
         "views/video_library_views.xml",

@@ -52,7 +52,7 @@
                         <group string="Nguồn &amp; Cấu Hình">
                             <field name="image_id" options="{'no_create': True}"/>
                             <field name="audio_id" options="{'no_create': True}"/>
-                            <field name="storage_id" readonly="1"/>
+                            <field name="storage_id" options="{'no_create': True}"/>
                             <field name="motion_effect"/>
                             <field name="effect_preset"/>
                             <field name="flash_effect"/>
