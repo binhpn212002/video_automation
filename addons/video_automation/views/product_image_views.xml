@@ -5,13 +5,14 @@
         <field name="name">product.image.tree</field>
         <field name="model">product.image</field>
         <field name="arch" type="xml">
-            <tree string="Kho Ảnh Sản Phẩm"
+            <tree string="Kho Ảnh"
                   decoration-muted="state == 'draft'"
                   decoration-info="state == 'uploaded'"
                   decoration-warning="state == 'generating'"
                   decoration-success="state == 'generated'"
                   decoration-danger="state == 'failed'">
                 <field name="name"/>
+                <field name="image_type" widget="badge"/>
                 <field name="storage_id"/>
                 <field name="storage_path"/>
                 <field name="generated" widget="boolean_toggle"/>
@@ -31,7 +32,7 @@
         <field name="name">product.image.form</field>
         <field name="model">product.image</field>
         <field name="arch" type="xml">
-            <form string="Ảnh Sản Phẩm">
+            <form string="Ảnh Hệ Thống">
                 <header>
                     <button name="action_upload_to_r2"
                             type="object"
@@ -42,7 +43,7 @@
                             type="object"
                             string="Tạo Video TikTok"
                             class="btn-success"
-                            invisible="state not in ('uploaded', 'generated', 'failed')"/>
+                            invisible="state not in ('uploaded', 'generated', 'failed') or image_type != 'product'"/>
                     <button name="action_rebuild_cdn_url"
                             type="object"
                             string="Rebuild CDN URL"
@@ -64,26 +65,27 @@
                         </button>
                     </div>
                     <div class="oe_title">
-                        <label for="name" string="Tên Sản Phẩm / Mã SKU"/>
+                        <label for="name" string="Tên Ảnh / Tiêu Đề"/>
                         <h1>
-                            <field name="name" placeholder="VD: Áo Thun Nam Basic Cotton 100%"/>
+                            <field name="name" placeholder="VD: Áo Thun Nam Basic / Ca Sĩ Sơn Tùng / Phông Nền Lofi Room"/>
                         </h1>
                     </div>
                     <group>
                         <group string="Lưu Trữ Cloudflare R2 (Ảnh)">
+                            <field name="image_type" widget="radio" options="{'horizontal': true}"/>
                             <field name="storage_id" options="{'no_create': True}"/>
                             <field name="upload_file" filename="upload_filename" invisible="storage_path"/>
                             <field name="upload_filename" invisible="1"/>
                             <field name="storage_path" readonly="1"/>
                             <field name="cdn_url" widget="url" readonly="1"/>
+                            <field name="active" widget="boolean_toggle"/>
                         </group>
-                        <group string="Cấu Hình Nội Dung TikTok">
+                        <group string="Cấu Hình Nội Dung TikTok Affiliate" invisible="image_type != 'product'">
                             <field name="default_hook" placeholder="VD: Mẫu này đang cực hot 🔥"/>
                             <field name="default_cta" placeholder="VD: Xem sản phẩm bên dưới ↓"/>
                             <field name="generated" readonly="1"/>
                             <field name="allow_multiple_gen"/>
                             <field name="last_generated_date" readonly="1"/>
-                            <field name="active" widget="boolean_toggle"/>
                         </group>
                     </group>
 
@@ -128,14 +130,23 @@
         <field name="name">product.image.search</field>
         <field name="model">product.image</field>
         <field name="arch" type="xml">
-            <search string="Tìm kiếm Ảnh Sản Phẩm">
+            <search string="Tìm kiếm Ảnh">
                 <field name="name"/>
                 <field name="storage_path"/>
                 <field name="storage_id"/>
+                <field name="image_type"/>
+                
+                <separator/>
+                <filter string="Ảnh Sản Phẩm" name="filter_type_product"
+                        domain="[('image_type', '=', 'product')]"/>
+                <filter string="Ảnh Nhân Vật / Ca Sĩ" name="filter_type_character"
+                        domain="[('image_type', '=', 'character')]"/>
+                <filter string="Ảnh Nền (Background)" name="filter_type_background"
+                        domain="[('image_type', '=', 'background')]"/>
                 
                 <separator/>
                 <filter string="Chờ Tạo Video (FIFO Queue)" name="filter_pending_gen"
-                        domain="[('generated', '=', False), ('storage_path', '!=', False), ('state', 'in', ('uploaded', 'failed'))]"/>
+                        domain="[('generated', '=', False), ('storage_path', '!=', False), ('image_type', '=', 'product'), ('state', 'in', ('uploaded', 'failed'))]"/>
                 <filter string="Đã Tạo Video" name="filter_generated"
                         domain="[('generated', '=', True)]"/>
                 <filter string="Chưa Upload R2" name="filter_draft"
@@ -144,6 +155,7 @@
                         domain="[('state', '=', 'failed')]"/>
                 
                 <group expand="0" string="Group By">
+                    <filter string="Loại Ảnh" name="group_image_type" context="{'group_by': 'image_type'}"/>
                     <filter string="R2 Image Storage" name="group_storage" context="{'group_by': 'storage_id'}"/>
                     <filter string="Trạng Thái" name="group_state" context="{'group_by': 'state'}"/>
                     <filter string="Đã Gen Video" name="group_generated" context="{'group_by': 'generated'}"/>

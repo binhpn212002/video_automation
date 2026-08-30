@@ -13,6 +13,7 @@ class VideoGenerateWizard(models.TransientModel):
     image_id = fields.Many2one(
         "product.image",
         string="Ảnh Sản Phẩm",
+        domain=[("image_type", "=", "product")],
         required=True,
         ondelete="cascade",
     )

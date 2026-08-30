@@ -4,12 +4,13 @@
         <field name="name">product.image.bulk.wizard.form</field>
         <field name="model">product.image.bulk.wizard</field>
         <field name="arch" type="xml">
-            <form string="Tải Lên Hàng Loạt Ảnh Sản Phẩm">
+            <form string="Tải Lên Hàng Loạt Ảnh (Bulk Upload)">
                 <group>
                     <group>
+                        <field name="image_type" widget="radio" options="{'horizontal': true}"/>
                         <field name="storage_id" options="{'no_create': True}"/>
                     </group>
-                    <group>
+                    <group invisible="image_type != 'product'">
                         <field name="default_hook" placeholder="VD: Mẫu này đang cực hot 🔥"/>
                         <field name="default_cta" placeholder="VD: Xem sản phẩm bên dưới ↓"/>
                     </group>

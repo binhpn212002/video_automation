@@ -58,6 +58,7 @@ class ImageStorage(models.Model):
                     ("active", "=", True),
                     ("storage_path", "!=", False),
                     ("generated", "=", False),
+                    ("image_type", "=", "product"),
                     ("state", "in", ("uploaded", "failed")),
                 ]
             )

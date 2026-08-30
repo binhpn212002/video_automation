@@ -7,7 +7,7 @@ import tempfile
 from odoo import api, fields, models
 from odoo.exceptions import UserError
 
-from ..services.ffmpeg_service import generate_video, probe_media
+from ..services.ffmpeg_service import generate_music_video, generate_video, probe_media
 from ..services.r2_client import R2Client, make_flat_object_key
 
 _logger = logging.getLogger(__name__)
@@ -74,6 +74,7 @@ class VideoLibrary(models.Model):
         [
             ("raw_video", "Raw Video"),
             ("affiliate_image", "Affiliate Image"),
+            ("music_video", "Video Ca Nhạc"),
         ],
         default="raw_video",
         required=True,
@@ -83,9 +84,80 @@ class VideoLibrary(models.Model):
     source_image_id = fields.Many2one(
         "product.image",
         string="Ảnh sản phẩm gốc",
+        domain=[("image_type", "=", "product")],
         ondelete="set null",
         index=True,
         help="Ảnh sản phẩm Affiliate dùng để tạo video này.",
+    )
+    bg_image_id = fields.Many2one(
+        "product.image",
+        string="Ảnh Background",
+        domain=[("image_type", "=", "background")],
+        ondelete="set null",
+        index=True,
+        help="Ảnh nền dùng cho Video Ca Nhạc.",
+    )
+    character_image_id = fields.Many2one(
+        "product.image",
+        string="Ảnh Nhân vật / Ca sĩ",
+        domain=[("image_type", "=", "character")],
+        ondelete="set null",
+        index=True,
+        help="Ảnh nhân vật / ca sĩ dùng cho Video Ca Nhạc.",
+    )
+    music_layout = fields.Selection(
+        [
+            ("spotify_card", "Card Âm Nhạc Sang Trọng (Spotify / Lofi Card)"),
+            ("vinyl_retro", "Đĩa Than Cổ Điển Xoay 360° (Vinyl Retro)"),
+            ("circular_avatar", "Avatar Tròn Tinh Tế (Circular Avatar)"),
+            ("floating_portrait", "Chân Dung Nghệ Thuật (Floating Portrait)"),
+            ("center_cutout", "Nhân vật Tách nền (Center Cutout)"),
+            ("spinning_vinyl", "Đĩa than xoay (Spinning Vinyl)"),
+            ("glass_card", "Khung kính mờ (Glassmorphism Card)"),
+        ],
+        default="spotify_card",
+        string="Kiểu Bố Cục Nhân Vật",
+    )
+    visualizer_style = fields.Selection(
+        [
+            ("none", "Không hiển thị"),
+            ("spectrum_bars", "Cột sóng Equalizer (Spectrum Bars)"),
+            ("sine_wave", "Đường sóng lượn (Smooth Wave)"),
+            ("radial_circle", "Sóng tròn bao quanh (Radial Wave)"),
+        ],
+        default="spectrum_bars",
+        string="Kiểu Sóng Nhạc (Visualizer)",
+    )
+    visualizer_color = fields.Selection(
+        [
+            ("cyan_neon", "Xanh Neon (Cyan Glow)"),
+            ("pink_purple", "Hồng Tím (Synthwave Pink)"),
+            ("golden_warm", "Vàng Ánh Kim (Golden Glow)"),
+            ("white_minimal", "Trắng Tối Giản (Pure White)"),
+        ],
+        default="cyan_neon",
+        string="Màu Sóng Nhạc",
+    )
+    particle_effect = fields.Selection(
+        [
+            ("none", "Không có"),
+            ("snow_fall", "Tuyết rơi lãng mạn (Snow Fall)"),
+            ("rain_drops", "Giọt mưa rơi mộng ảo (Rain Drops)"),
+            ("dust_bokeh", "Hạt bụi sáng (Dust & Bokeh)"),
+            ("stage_lights", "Tia đèn sân khấu (Stage Lights)"),
+        ],
+        default="snow_fall",
+        string="Hiệu Ứng Không Khí",
+    )
+    music_preset = fields.Selection(
+        [
+            ("lofi_chill", "Lofi / Chill (Đĩa than xoay, Nhẹ nhàng)"),
+            ("edm_remix", "EDM / Remix / Vinahouse (Flash mạnh, Bass Bounce)"),
+            ("ballad_acoustic", "Ballad / Acoustic (Mộng ảo, Mưa rơi)"),
+            ("hiphop_cyber", "Rap / HipHop / Cyberpunk (Neon Glow)"),
+        ],
+        default="lofi_chill",
+        string="Preset Thể Loại Nhạc",
     )
     hook_text = fields.Char(string="Hook Text", help="Câu Hook ở đầu video.")
     cta_text = fields.Char(string="CTA Text", help="Câu Call-To-Action ở cuối video.")
@@ -215,6 +287,15 @@ class VideoLibrary(models.Model):
             "target": "new",
         }
 
+    def action_open_music_video_wizard(self):
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Tạo Video Ca Nhạc",
+            "res_model": "music.video.generate.wizard",
+            "view_mode": "form",
+            "target": "new",
+        }
+
     def action_replace_audio(self):
         self.ensure_one()
         if not self.storage_path or not self.storage_id:
@@ -299,12 +380,12 @@ class VideoLibrary(models.Model):
                 {
                     "filename": object_key,
                     "storage_path": object_key,
-                    "duration": meta["duration"],
-                    "width": meta["width"],
-                    "height": meta["height"],
-                    "fps": meta["fps"],
-                    "bitrate": meta["bitrate"],
-                    "file_size": meta["file_size"],
+                    "duration": float(meta.get("duration") or 0.0),
+                    "width": int(meta.get("width") or 1080),
+                    "height": int(meta.get("height") or 1920),
+                    "fps": float(meta.get("fps") or 30.0),
+                    "bitrate": int(meta.get("bitrate") or 0),
+                    "file_size": int(meta.get("file_size") or (os.path.getsize(local_path) if os.path.exists(local_path) else 0)),
                     "state": "uploaded",
                     "upload_file": False,
                     "upload_filename": False,
@@ -375,4 +456,16 @@ class VideoLibrary(models.Model):
                 storage.action_top_up_pool()
             except Exception:
                 _logger.exception("Auto top-up failed for storage %s", storage.id)
+
+    def unlink(self):
+        """Xóa file video trên Cloudflare R2 khi xóa record."""
+        for video in self:
+            if video.storage_id and video.storage_path:
+                try:
+                    client = R2Client(video.storage_id)
+                    client.delete_file(video.storage_path)
+                except Exception as exc:
+                    _logger.warning("Không thể xóa file R2 khi xóa video %s (%s): %s", video.id, video.storage_path, exc)
+        return super().unlink()
+
 

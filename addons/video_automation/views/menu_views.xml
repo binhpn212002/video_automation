@@ -28,6 +28,12 @@
               action="action_video_library"
               sequence="10"/>
 
+    <menuitem id="menu_va_music_video_wizard"
+              name="Tạo Video Ca Nhạc"
+              parent="menu_va_library"
+              action="action_music_video_generate_wizard"
+              sequence="12"/>
+
 
     <menuitem id="menu_va_audio_library"
               name="Audio"

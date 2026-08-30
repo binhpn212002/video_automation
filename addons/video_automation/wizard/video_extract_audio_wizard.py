@@ -53,8 +53,8 @@ class VideoExtractAudioWizard(models.TransientModel):
                     "filename": object_key,
                     "storage_id": video.storage_id.id,
                     "storage_path": object_key,
-                    "duration": meta["duration"],
-                    "file_size": meta["file_size"] or os.path.getsize(audio_local),
+                    "duration": float(meta.get("duration") or 0.0),
+                    "file_size": meta.get("file_size") or (os.path.getsize(audio_local) if os.path.exists(audio_local) else 0),
                     "source_video_id": video.id,
                     "active": True,
                 }

@@ -34,6 +34,18 @@ class ProductImage(models.Model):
     _order = "create_date asc, id asc"
 
     name = fields.Char(string="Tên / SKU Sản Phẩm", required=True, tracking=True)
+    image_type = fields.Selection(
+        [
+            ("product", "Ảnh Sản Phẩm (Product)"),
+            ("character", "Ảnh Nhân Vật / Ca Sĩ (Character)"),
+            ("background", "Ảnh Nền (Background)"),
+        ],
+        default="product",
+        required=True,
+        string="Loại Ảnh",
+        tracking=True,
+        index=True,
+    )
     storage_id = fields.Many2one("image.storage", string="R2 Image Storage", required=True)
     storage_path = fields.Char(string="Object Path (R2)")
     cdn_url = fields.Char(
@@ -217,6 +229,7 @@ class ProductImage(models.Model):
             ("active", "=", True),
             ("storage_path", "!=", False),
             ("generated", "=", False),
+            ("image_type", "=", "product"),
             ("state", "in", ("uploaded", "failed")),
         ]
         if storage and getattr(storage, "_name", None) == "image.storage":
@@ -419,3 +432,15 @@ class ProductImage(models.Model):
                 "sticky": bool(error_messages),
             },
         }
+
+    def unlink(self):
+        """Xóa file ảnh trên Cloudflare R2 khi xóa record."""
+        for img in self:
+            if img.storage_id and img.storage_path:
+                try:
+                    client = R2Client(img.storage_id)
+                    client.delete_file(img.storage_path)
+                except Exception as exc:
+                    _logger.warning("Không thể xóa file R2 khi xóa ảnh %s (%s): %s", img.id, img.storage_path, exc)
+        return super().unlink()
+

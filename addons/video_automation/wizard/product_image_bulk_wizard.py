@@ -19,6 +19,16 @@ class ProductImageBulkWizard(models.TransientModel):
         string="R2 Image Storage",
         required=True,
     )
+    image_type = fields.Selection(
+        [
+            ("product", "Ảnh Sản Phẩm (Product)"),
+            ("character", "Ảnh Nhân Vật / Ca Sĩ (Character)"),
+            ("background", "Ảnh Nền (Background)"),
+        ],
+        default="product",
+        required=True,
+        string="Loại Ảnh",
+    )
     attachment_ids = fields.Many2many(
         "ir.attachment",
         string="Chọn danh sách file ảnh",
@@ -75,6 +85,7 @@ class ProductImageBulkWizard(models.TransientModel):
                             record = ProductImage.create(
                                 {
                                     "name": img_name,
+                                    "image_type": self.image_type,
                                     "storage_id": self.storage_id.id,
                                     "upload_file": base64.b64encode(file_data),
                                     "upload_filename": base,
@@ -101,6 +112,7 @@ class ProductImageBulkWizard(models.TransientModel):
                     record = ProductImage.create(
                         {
                             "name": img_name,
+                            "image_type": self.image_type,
                             "storage_id": self.storage_id.id,
                             "upload_file": att.datas,
                             "upload_filename": filename,

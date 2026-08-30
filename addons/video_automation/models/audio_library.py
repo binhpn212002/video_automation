@@ -119,12 +119,13 @@ class AudioLibrary(models.Model):
             # Analyze beats immediately on upload
             beats, bpm, status = detect_beats(local_path)
             
+            file_sz = meta.get("file_size") or (os.path.getsize(local_path) if os.path.exists(local_path) else 0)
             self.write(
                 {
                     "filename": object_key,
                     "storage_path": object_key,
-                    "duration": meta["duration"],
-                    "file_size": meta["file_size"] or os.path.getsize(local_path),
+                    "duration": float(meta.get("duration") or 0.0),
+                    "file_size": file_sz,
                     "beat_data": json.dumps(beats),
                     "bpm": bpm,
                     "beat_status": status,
@@ -212,4 +213,16 @@ class AudioLibrary(models.Model):
             return beats
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
+
+    def unlink(self):
+        """Xóa file audio trên Cloudflare R2 khi xóa record."""
+        for audio in self:
+            if audio.storage_id and audio.storage_path:
+                try:
+                    client = R2Client(audio.storage_id)
+                    client.delete_file(audio.storage_path)
+                except Exception as exc:
+                    _logger.warning("Không thể xóa file R2 khi xóa audio %s (%s): %s", audio.id, audio.storage_path, exc)
+        return super().unlink()
+
 

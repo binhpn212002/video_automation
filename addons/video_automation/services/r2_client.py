@@ -171,3 +171,22 @@ class R2Client:
 
         return f"{domain}/{key}"
 
+    def delete_file(self, object_key):
+        """Delete object from R2 bucket."""
+        if not object_key:
+            return False
+        try:
+            key = self.resolve_object_key(object_key)
+        except Exception:
+            key = self.normalize_object_key(object_key)
+        if not key:
+            return False
+        try:
+            self.client.delete_object(Bucket=self.bucket, Key=key)
+            _logger.info("Deleted R2 object '%s' from bucket '%s'", key, self.bucket)
+            return True
+        except Exception as exc:
+            _logger.warning("Failed to delete R2 object '%s' from bucket '%s': %s", key, self.bucket, exc)
+            return False
+
+
