@@ -71,11 +71,13 @@ class TikTokClient:
         self.app = app
         self.account = account
 
-    def build_authorize_url(self, state, code_verifier):
+    def build_authorize_url(self, state, code_verifier, scope=None):
         code_challenge = generate_code_challenge(code_verifier)
+        if not scope:
+            scope = "user.info.basic,user.info.profile,user.info.stats,video.publish,video.upload,video.list"
         params = {
             "client_key": self.app.client_key,
-            "scope": "user.info.basic,video.publish,video.upload",
+            "scope": scope,
             "response_type": "code",
             "redirect_uri": self.app.redirect_uri,
             "state": state,
@@ -123,8 +125,23 @@ class TikTokClient:
             return data["data"]
         return data
 
-    def get_user_info(self, access_token, fields="open_id,display_name,avatar_url"):
-        """Fetch basic profile after OAuth (scope user.info.basic)."""
+    def get_user_info(self, access_token, fields=None):
+        """Fetch user profile after OAuth (returns user dict for backward compatibility)."""
+        res = self.get_user_info_full(access_token, fields=fields)
+        return res.get("user") or {}
+
+    def get_user_info_full(self, access_token, fields=None):
+        """
+        Fetch full user profile from /v2/user/info/.
+        Returns structured dict with success status, user info, error and raw response.
+        """
+        if not fields:
+            fields = (
+                "open_id,union_id,avatar_url,avatar_url_100,avatar_url_200,avatar_large_url,"
+                "display_name,bio_description,profile_deep_link,is_verified,"
+                "follower_count,following_count,likes_count,video_count"
+            )
+
         resp = _request(
             "GET",
             USER_INFO_URL,
@@ -133,11 +150,116 @@ class TikTokClient:
             timeout=30,
         )
         data = resp.json() if resp.content else {}
-        if resp.status_code >= 400:
-            _logger.warning("TikTok user info failed: %s", data or resp.text)
-            return {}
+
+        # Nếu lỗi do một số field không thuộc scope được cấp, retry với basic fields
+        if resp.status_code == 400 or (
+            isinstance(data.get("error"), dict)
+            and data["error"].get("code") in ("scope_not_authorized", "invalid_params", "field_not_authorized")
+        ):
+            fallback_fields = "open_id,union_id,avatar_url,display_name,bio_description,profile_deep_link,is_verified"
+            _logger.info("Retrying TikTok user info with fallback fields: %s", fallback_fields)
+            resp = _request(
+                "GET",
+                USER_INFO_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+                params={"fields": fallback_fields},
+                timeout=30,
+            )
+            data = resp.json() if resp.content else {}
+
+        err = data.get("error") if isinstance(data, dict) else {}
+        err_code = err.get("code") if isinstance(err, dict) else None
+        err_msg = err.get("message") if isinstance(err, dict) else ""
+        is_success = resp.status_code == 200 and (not err_code or err_code == "ok")
         user = (data.get("data") or {}).get("user") or {}
-        return user
+
+        return {
+            "success": is_success,
+            "status_code": resp.status_code,
+            "user": user,
+            "error_code": err_code,
+            "error_message": err_msg or (resp.text if not is_success else ""),
+            "raw": data,
+        }
+
+    def get_creator_info(self, access_token):
+        """
+        Query creator info & posting permissions from /v2/post/publish/creator_info/query/.
+        Scope: video.publish or video.upload.
+        """
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=UTF-8",
+        }
+        resp = _request("POST", CREATOR_INFO_URL, headers=headers, json={}, timeout=30)
+        data = resp.json() if resp.content else {}
+        err = data.get("error") if isinstance(data, dict) else {}
+        err_code = err.get("code") if isinstance(err, dict) else None
+        err_msg = err.get("message") if isinstance(err, dict) else ""
+        is_success = resp.status_code == 200 and (not err_code or err_code == "ok")
+        creator = data.get("data") if isinstance(data.get("data"), dict) else {}
+
+        return {
+            "success": is_success,
+            "status_code": resp.status_code,
+            "creator": creator,
+            "error_code": err_code,
+            "error_message": err_msg or (resp.text if not is_success else ""),
+            "raw": data,
+        }
+
+    def fetch_full_profile(self, access_token=None):
+        """
+        Aggregate user info and creator info for inspection & token validation.
+        """
+        token = access_token or (self.account.access_token if self.account else None)
+        if not token:
+            return {
+                "is_valid": False,
+                "token_status": "disconnected",
+                "error_message": "Chưa có Access Token.",
+                "user_info": {},
+                "creator_info": {},
+                "raw_user": {},
+                "raw_creator": {},
+            }
+
+        user_res = self.get_user_info_full(token)
+        creator_res = self.get_creator_info(token)
+
+        # Kiểm tra token hợp lệ
+        is_token_invalid = (
+            user_res.get("status_code") in (401, 403)
+            or user_res.get("error_code") in ("access_token_invalid", "token_expired", "invalid_token", "invalid_grant", "unauthorized")
+            or (not user_res.get("success") and creator_res.get("status_code") in (401, 403))
+        )
+
+        if is_token_invalid:
+            token_status = "expired"
+            error_message = (
+                user_res.get("error_message")
+                or creator_res.get("error_message")
+                or "Access Token đã hết hạn hoặc không hợp lệ trên TikTok."
+            )
+            is_valid = False
+        elif user_res.get("success") or creator_res.get("success"):
+            token_status = "valid"
+            error_message = ""
+            is_valid = True
+        else:
+            token_status = "invalid"
+            error_message = user_res.get("error_message") or creator_res.get("error_message") or "Lỗi kết nối TikTok API."
+            is_valid = False
+
+        return {
+            "is_valid": is_valid,
+            "token_status": token_status,
+            "error_message": error_message,
+            "user_info": user_res.get("user") or {},
+            "creator_info": creator_res.get("creator") or {},
+            "raw_user": user_res.get("raw") or {},
+            "raw_creator": creator_res.get("raw") or {},
+        }
 
     def _headers(self):
         return {

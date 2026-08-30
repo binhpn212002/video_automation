@@ -1,0 +1,3 @@
+https://www.tiktok.com/v2/auth/authorize/?client_key=sbaw7oubryb7flszwc&response_type=code&scope=user.info.basic,user.info.profile,user.info.stats,video.publish,video.upload,video.list&redirect_uri=https://badmintion-booking.netlify.app/auth/tiktok/callback&state=RANDOM_STATE
+
+https://badmintion-booking.netlify.app/auth/tiktok/callback?code=A4gjTcJtLtw77O7cj_Af6c32pI39sE9f1hO_V8214vET4RZqOXj5ySBJUHMBs-cTpIamyQkif6HpNIAPtp9bP2JRMilnvyMEVGSzCgHdvFldFc8BOckPNf-doNfNOBlf8S6nwgj8t-XXrDC2M5h65KAICG9dprMnpGHPoy8jFghoaxv8wDf4And1a3-FMOMYePy9Hs4Ab1MV5ieK1YsgD29FbCE7LLl-8LiNeDCOj5o2WAPX6ZKGrpnF6vfos1JOcENQJUfocrqooXrs3C8St_RGpVYPyBofDezv6A*v!6459.s1&scopes=user.info.basic,user.info.profile,user.info.stats,video.list,video.publish,video.upload&state=RANDOM_STATE

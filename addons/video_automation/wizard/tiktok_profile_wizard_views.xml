@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tiktok_profile_wizard_form" model="ir.ui.view">
+        <field name="name">tiktok.profile.wizard.form</field>
+        <field name="model">tiktok.profile.wizard</field>
+        <field name="arch" type="xml">
+            <form string="TikTok Profile &amp; Token Status">
+                <field name="is_valid" invisible="1"/>
+                <field name="is_verified" invisible="1"/>
+                <field name="avatar_url" invisible="1"/>
+                <field name="error_message" invisible="1"/>
+
+                <!-- Banner trạng thái Token -->
+                <div class="alert alert-success d-flex align-items-center mb-3" role="alert"
+                     invisible="not is_valid">
+                    <i class="fa fa-check-circle fa-2x me-3" style="color: #28a745;" title="Valid"/>
+                    <div>
+                        <h4 class="alert-heading mb-1" style="color: #155724;">Token TikTok Hợp Lệ (Connected)</h4>
+                        <div>
+                            <field name="status_message" readonly="1" class="fw-bold"/>
+                            <span class="ms-2">| Thời hạn: <b><field name="time_remaining" readonly="1" class="text-success"/></b> (<field name="token_expires_at" readonly="1"/>)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger d-flex align-items-center mb-3" role="alert"
+                     invisible="is_valid">
+                    <i class="fa fa-exclamation-triangle fa-2x me-3" style="color: #dc3545;" title="Error"/>
+                    <div>
+                        <h4 class="alert-heading mb-1" style="color: #721c24;">Token TikTok Không Hợp Lệ Hoặc Đã Hết Hạn</h4>
+                        <div>
+                            <field name="status_message" readonly="1" class="fw-bold text-danger"/>
+                            <div invisible="not error_message" class="small mt-1 text-muted">
+                                Chi tiết: <field name="error_message" readonly="1"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <sheet>
+                    <field name="avatar_image" widget="image" class="oe_avatar" options="{'size': [90, 90]}"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="display_name" placeholder="Display Name"/>
+                        </h1>
+                        <h3>
+                            <span class="text-muted">@</span><field name="creator_username" placeholder="username" class="oe_inline"/>
+                            <span class="badge bg-primary ms-2" invisible="not is_verified">Verified ✓</span>
+                        </h3>
+                    </div>
+
+                    <group>
+                        <group string="Tài khoản &amp; Kết nối">
+                            <field name="tiktok_account_id" readonly="1"/>
+                            <field name="token_status" widget="badge"/>
+                            <field name="open_id"/>
+                            <field name="union_id" invisible="not union_id"/>
+                            <field name="profile_deep_link" widget="url" invisible="not profile_deep_link"/>
+                        </group>
+                        <group string="Thời hạn Access Token">
+                            <field name="token_expires_at"/>
+                            <field name="time_remaining"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Thống kê &amp; Cài đặt Creator" name="stats_creator">
+                            <group>
+                                <group string="Thống kê Kênh (Stats)">
+                                    <field name="follower_count"/>
+                                    <field name="following_count"/>
+                                    <field name="likes_count"/>
+                                    <field name="video_count"/>
+                                </group>
+                                <group string="Cài đặt Đăng bài (Creator Info)">
+                                    <field name="max_video_post_duration_sec"/>
+                                    <field name="privacy_level_options"/>
+                                    <field name="duet_disabled"/>
+                                    <field name="stitch_disabled"/>
+                                    <field name="comment_disabled"/>
+                                </group>
+                            </group>
+                            <group string="Tiểu sử (Bio)">
+                                <field name="bio_description" nolabel="1" placeholder="Chưa có thông tin bio."/>
+                            </group>
+                        </page>
+
+                        <page string="Raw JSON từ TikTok API" name="raw_json">
+                            <group string="User Info JSON (/v2/user/info/)">
+                                <field name="raw_user_info_json" nolabel="1" widget="ace" options="{'mode': 'json'}"/>
+                            </group>
+                            <group string="Creator Info JSON (/v2/post/publish/creator_info/query/)">
+                                <field name="raw_creator_info_json" nolabel="1" widget="ace" options="{'mode': 'json'}"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+
+                <footer>
+                    <button name="action_refresh_token" type="object" string="🔄 Refresh Token"
+                            class="btn-primary"/>
+                    <button name="action_login_tiktok" type="object" string="🔗 Login TikTok Lại (OAuth)"
+                            class="btn-secondary"/>
+                    <button string="Đóng" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -33,5 +33,10 @@ access_audio_library_bulk_wizard_user,audio.library.bulk.wizard user,model_audio
 access_audio_library_bulk_wizard_manager,audio.library.bulk.wizard manager,model_audio_library_bulk_wizard,group_video_automation_manager,1,1,1,1
 access_tiktok_publish_wizard_user,tiktok.publish.wizard user,model_tiktok_publish_wizard,group_video_automation_user,1,1,1,1
 access_tiktok_publish_wizard_manager,tiktok.publish.wizard manager,model_tiktok_publish_wizard,group_video_automation_manager,1,1,1,1
+access_video_replace_audio_wizard_user,video.replace.audio.wizard user,model_video_replace_audio_wizard,group_video_automation_user,1,1,1,1
+access_video_replace_audio_wizard_manager,video.replace.audio.wizard manager,model_video_replace_audio_wizard,group_video_automation_manager,1,1,1,1
+access_tiktok_profile_wizard_user,tiktok.profile.wizard user,model_tiktok_profile_wizard,group_video_automation_user,1,1,1,1
+access_tiktok_profile_wizard_manager,tiktok.profile.wizard manager,model_tiktok_profile_wizard,group_video_automation_manager,1,1,1,1
+
 
 

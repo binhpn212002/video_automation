@@ -215,6 +215,22 @@ class VideoLibrary(models.Model):
             "target": "new",
         }
 
+    def action_replace_audio(self):
+        self.ensure_one()
+        if not self.storage_path or not self.storage_id:
+            raise UserError("Video chưa upload lên Cloudflare R2 — không thể thay đổi âm thanh.")
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Thay Đổi Âm Thanh Cho Video",
+            "res_model": "video.replace.audio.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_video_id": self.id,
+                "default_output_video_name": f"{self.name} (Audio mới)",
+            },
+        }
+
     def action_extract_audio(self):
         self.ensure_one()
         if not self.storage_path:

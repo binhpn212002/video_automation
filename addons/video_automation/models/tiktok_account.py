@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import datetime, timedelta
 
@@ -58,6 +59,88 @@ class TikTokAccount(models.Model):
         groups="video_automation.group_video_automation_manager",
         help="Temporary PKCE verifier for OAuth (cleared after connect).",
     )
+
+    def action_show_profile(self):
+        """Kiểm tra token và mở popup Profile TikTok."""
+        self.ensure_one()
+        if not self.access_token:
+            raise UserError("Account này chưa có Access Token. Vui lòng bấm Login TikTok hoặc nhập Access Token trước.")
+
+        client = TikTokClient(self.tiktok_app_id, self)
+        res = client.fetch_full_profile(self.access_token)
+
+        user = res.get("user_info") or {}
+        creator = res.get("creator_info") or {}
+        is_valid = res.get("is_valid", False)
+        token_status = res.get("token_status", "invalid")
+        error_msg = res.get("error_message", "")
+
+        # Cập nhật auth_state và các thông tin cơ bản trên tiktok.account
+        account_vals = {}
+        if is_valid:
+            account_vals["auth_state"] = "connected"
+            if user.get("display_name"):
+                account_vals["username"] = user["display_name"]
+            elif creator.get("creator_nickname"):
+                account_vals["username"] = creator["creator_nickname"]
+            if user.get("open_id"):
+                account_vals["open_id"] = user["open_id"]
+            if user.get("profile_deep_link"):
+                account_vals["profile_url"] = user["profile_deep_link"]
+        elif token_status == "expired":
+            account_vals["auth_state"] = "expired"
+
+        if account_vals:
+            self.write(account_vals)
+
+        status_msg = "Token hợp lệ và đang hoạt động." if is_valid else (
+            f"Token hết hạn hoặc lỗi: {error_msg}" if error_msg else "Token không hợp lệ."
+        )
+
+        privacy_opts = creator.get("privacy_level_options")
+        if isinstance(privacy_opts, list):
+            privacy_opts_str = ", ".join(privacy_opts)
+        else:
+            privacy_opts_str = str(privacy_opts or "")
+
+        wizard_vals = {
+            "tiktok_account_id": self.id,
+            "is_valid": is_valid,
+            "token_status": token_status,
+            "status_message": status_msg,
+            "error_message": error_msg,
+            "token_expires_at": self.token_expires_at,
+            "display_name": user.get("display_name") or creator.get("creator_nickname") or self.username or self.name,
+            "creator_username": creator.get("creator_username") or "",
+            "open_id": user.get("open_id") or self.open_id or "",
+            "union_id": user.get("union_id") or "",
+            "avatar_url": user.get("avatar_url") or user.get("avatar_large_url") or creator.get("creator_avatar_url") or "",
+            "profile_deep_link": user.get("profile_deep_link") or self.profile_url or "",
+            "bio_description": user.get("bio_description") or "",
+            "is_verified": bool(user.get("is_verified")),
+            "follower_count": int(user.get("follower_count") or 0),
+            "following_count": int(user.get("following_count") or 0),
+            "likes_count": int(user.get("likes_count") or 0),
+            "video_count": int(user.get("video_count") or 0),
+            "max_video_post_duration_sec": int(creator.get("max_video_post_duration_sec") or 0),
+            "privacy_level_options": privacy_opts_str,
+            "duet_disabled": bool(creator.get("duet_disabled")),
+            "stitch_disabled": bool(creator.get("stitch_disabled")),
+            "comment_disabled": bool(creator.get("comment_disabled")),
+            "raw_user_info_json": json.dumps(res.get("raw_user") or {}, indent=2, ensure_ascii=False),
+            "raw_creator_info_json": json.dumps(res.get("raw_creator") or {}, indent=2, ensure_ascii=False),
+        }
+
+        wizard = self.env["tiktok.profile.wizard"].create(wizard_vals)
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": f"TikTok Profile - {self.display_name}",
+            "res_model": "tiktok.profile.wizard",
+            "res_id": wizard.id,
+            "view_mode": "form",
+            "target": "new",
+        }
 
     def action_apply_manual_tokens(self):
         """Mark account connected after manual token entry."""

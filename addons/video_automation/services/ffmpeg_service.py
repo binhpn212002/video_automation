@@ -51,6 +51,7 @@ def probe_media(path):
         num, den = avg.split("/", 1)
         den = float(den) or 1.0
         fps = float(num) / den
+    has_audio = any(s.get("codec_type") == "audio" for s in data.get("streams", []))
     return {
         "duration": float(fmt.get("duration") or video_stream.get("duration") or 0),
         "width": int(video_stream.get("width") or 0),
@@ -58,6 +59,7 @@ def probe_media(path):
         "fps": fps,
         "bitrate": int(fmt.get("bit_rate") or 0),
         "file_size": int(fmt.get("size") or 0),
+        "has_audio": has_audio,
     }
 
 
@@ -530,4 +532,93 @@ def generate_video(video_path, audio_path, output_path, logo_path=None):
         _logger.error("FFmpeg generate_video failed: %s", result.stderr)
         raise RuntimeError(result.stderr[-2000:] if result.stderr else "FFmpeg generate_video failed")
     return output_path
+
+
+def replace_video_audio(
+    video_path,
+    audio_path,
+    output_path,
+    keep_original_audio=False,
+    original_vol_ratio=1.0,
+    bg_music_vol_ratio=0.3,
+    audio_fade_out=0.8,
+):
+    """
+    Thay thế hoặc trộn âm thanh cho video.
+    - keep_original_audio=False: Thay thế 100% âm thanh cũ bằng audio mới, lặp audio nếu ngắn hơn video, fade-out ở cuối.
+    - keep_original_audio=True: Trộn âm thanh gốc và nhạc nền mới (amix) theo tỉ lệ volume tương ứng.
+    Stream video được sao chép (-c:v copy) giúp xử lý cực nhanh không làm giảm chất lượng hình ảnh.
+    """
+    meta = probe_media(video_path)
+    video_duration = float(meta.get("duration") or 0.0)
+    has_audio = bool(meta.get("has_audio"))
+
+    fade_st = max(0.0, video_duration - (audio_fade_out or 0.8)) if video_duration > 0 else 0.0
+    afade_str = f"afade=t=out:st={fade_st:.2f}:d={audio_fade_out:.2f}" if (audio_fade_out and fade_st > 0) else None
+
+    if keep_original_audio and has_audio:
+        orig_vol = max(0.0, float(original_vol_ratio or 1.0))
+        bg_vol = max(0.0, float(bg_music_vol_ratio or 0.3))
+        bg_af_parts = [f"volume={bg_vol:.2f}"]
+        if afade_str:
+            bg_af_parts.append(afade_str)
+        bg_af = ",".join(bg_af_parts)
+
+        filter_complex = (
+            f"[0:a]volume={orig_vol:.2f}[a0];"
+            f"[1:a]{bg_af}[a1];"
+            f"[a0][a1]amix=inputs=2:duration=first:dropout_transition=0[aout]"
+        )
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", video_path,
+            "-stream_loop", "-1",
+            "-i", audio_path,
+            "-filter_complex", filter_complex,
+            "-map", "0:v:0",
+            "-map", "[aout]",
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", "44100",
+        ]
+        if video_duration > 0:
+            cmd.extend(["-t", f"{video_duration:.2f}"])
+        else:
+            cmd.append("-shortest")
+        cmd.append(output_path)
+    else:
+        audio_filters = []
+        if afade_str:
+            audio_filters.append(afade_str)
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", video_path,
+            "-stream_loop", "-1",
+            "-i", audio_path,
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", "44100",
+        ]
+        if audio_filters:
+            cmd.extend(["-af", ",".join(audio_filters)])
+        if video_duration > 0:
+            cmd.extend(["-t", f"{video_duration:.2f}"])
+        else:
+            cmd.append("-shortest")
+        cmd.append(output_path)
+
+    _logger.info("Running FFmpeg replace_video_audio: %s", " ".join(cmd))
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        _logger.error("FFmpeg replace_video_audio failed: %s", result.stderr)
+        raise RuntimeError(result.stderr[-2000:] if result.stderr else "FFmpeg replace_video_audio failed")
+    return output_path
+
 

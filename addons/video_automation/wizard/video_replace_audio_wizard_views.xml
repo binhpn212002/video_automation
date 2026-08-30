@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_video_replace_audio_wizard_form" model="ir.ui.view">
+        <field name="name">video.replace.audio.wizard.form</field>
+        <field name="model">video.replace.audio.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Thay Đổi Âm Thanh Cho Video">
+                <group>
+                    <group string="Video Cần Xử Lý">
+                        <field name="video_id" readonly="1"/>
+                        <field name="storage_id" readonly="1"/>
+                        <field name="replace_mode" widget="radio"/>
+                        <field name="output_video_name" invisible="replace_mode != 'new_record'"
+                               placeholder="VD: Video Tiêu Đề (Audio mới)"/>
+                    </group>
+                    <group string="Chọn Hoặc Tải Lên Âm Thanh Mới">
+                        <field name="audio_source" widget="radio" options="{'horizontal': true}"/>
+                        <field name="audio_id" options="{'no_create': True}"
+                               invisible="audio_source != 'library'"
+                               placeholder="Chọn bài nhạc từ Thư Viện..."/>
+                        <field name="upload_audio_filename" invisible="1"/>
+                        <field name="upload_audio_file" filename="upload_audio_filename"
+                               invisible="audio_source != 'upload'"/>
+                        <field name="upload_audio_name" invisible="audio_source != 'upload'"
+                               placeholder="Tên bài nhạc sẽ lưu vào Thư Viện..."/>
+                    </group>
+                </group>
+
+                <group string="Cấu Hình Hòa Trộn &amp; Âm Lượng">
+                    <group>
+                        <field name="keep_original_audio" widget="boolean_toggle"/>
+                        <field name="audio_fade_out"/>
+                    </group>
+                    <group invisible="not keep_original_audio">
+                        <field name="original_volume"/>
+                        <field name="bg_music_volume"/>
+                    </group>
+                </group>
+
+                <div class="alert alert-info" role="alert">
+                    <b>Xử lý FFmpeg cực nhanh &amp; Lossless:</b> Video stream được giữ nguyên chất lượng gốc. Nếu <i>Trộn nhạc nền</i> tắt, toàn bộ âm thanh cũ sẽ được thay bằng bài nhạc mới và tự động fade-out êm ái ở cuối video.
+                </div>
+
+                <footer>
+                    <button name="action_replace" type="object" string="Bắt Đầu Thay Audio"
+                            class="btn-primary"/>
+                    <button string="Hủy" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_video_replace_audio_wizard" model="ir.actions.act_window">
+        <field name="name">Thay Audio Cho Video</field>
+        <field name="res_model">video.replace.audio.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_video_library"/>
+        <field name="binding_view_types">form</field>
+    </record>
+</odoo>

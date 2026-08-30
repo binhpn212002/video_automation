@@ -30,6 +30,9 @@
                     <button name="action_upload_to_r2" type="object" string="Upload to R2"
                             class="btn-primary"
                             invisible="not upload_file"/>
+                    <button name="action_replace_audio" type="object" string="Thay Audio"
+                            class="btn-primary"
+                            invisible="not storage_path"/>
                     <button name="action_extract_audio" type="object" string="Extract Audio"
                             class="btn-secondary"
                             invisible="not storage_path"/>
