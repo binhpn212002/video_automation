@@ -39,8 +39,11 @@ access_tiktok_profile_wizard_user,tiktok.profile.wizard user,model_tiktok_profil
 access_tiktok_profile_wizard_manager,tiktok.profile.wizard manager,model_tiktok_profile_wizard,group_video_automation_manager,1,1,1,1
 access_music_video_generate_wizard_user,music.video.generate.wizard user,model_music_video_generate_wizard,group_video_automation_user,1,1,1,1
 access_music_video_generate_wizard_manager,music.video.generate.wizard manager,model_music_video_generate_wizard,group_video_automation_manager,1,1,1,1
+access_music_video_bulk_wizard_user,music.video.bulk.wizard user,model_music_video_bulk_wizard,group_video_automation_user,1,1,1,1
+access_music_video_bulk_wizard_manager,music.video.bulk.wizard manager,model_music_video_bulk_wizard,group_video_automation_manager,1,1,1,1
 access_audio_deduplicate_wizard_user,audio.deduplicate.wizard user,model_audio_deduplicate_wizard,group_video_automation_user,1,1,1,1
 access_audio_deduplicate_wizard_manager,audio.deduplicate.wizard manager,model_audio_deduplicate_wizard,group_video_automation_manager,1,1,1,1
+
 
 
 

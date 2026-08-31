@@ -29,10 +29,16 @@
               sequence="10"/>
 
     <menuitem id="menu_va_music_video_wizard"
-              name="Tạo Video Ca Nhạc"
+              name="Tạo 1 Video Ca Nhạc"
               parent="menu_va_library"
               action="action_music_video_generate_wizard"
               sequence="12"/>
+
+    <menuitem id="menu_va_music_video_bulk_wizard"
+              name="Tạo Video Ca Nhạc Hàng Loạt"
+              parent="menu_va_library"
+              action="action_music_video_bulk_wizard"
+              sequence="13"/>
 
 
     <menuitem id="menu_va_audio_library"

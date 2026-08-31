@@ -192,10 +192,14 @@ class MusicVideoGenerateWizard(models.TransientModel):
         audio_client = R2Client(audio.storage_id)
         video_client = R2Client(video_storage)
 
+        bg_ext = os.path.splitext(bg.storage_path)[1] or ".jpg"
+        char_ext = os.path.splitext(char.storage_path)[1] or ".png"
+        audio_ext = os.path.splitext(audio.storage_path)[1] or ".mp3"
+
         work_dir = _make_workdir("va_mvgen_")
-        bg_local = os.path.join(work_dir, "bg_image.jpg")
-        char_local = os.path.join(work_dir, "char_image.png")
-        audio_local = os.path.join(work_dir, "audio.mp3")
+        bg_local = os.path.join(work_dir, f"bg_image{bg_ext}")
+        char_local = os.path.join(work_dir, f"char_image{char_ext}")
+        audio_local = os.path.join(work_dir, f"audio{audio_ext}")
         output_local = os.path.join(work_dir, "output.mp4")
 
         try:

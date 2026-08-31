@@ -30,6 +30,7 @@ Video Automation Auto Schedule & TikTok Affiliate Video Generator
         "wizard/video_extract_audio_wizard_views.xml",
         "wizard/video_generate_wizard_views.xml",
         "wizard/music_video_generate_wizard_views.xml",
+        "wizard/music_video_bulk_wizard_views.xml",
         "wizard/video_replace_audio_wizard_views.xml",
         "wizard/tiktok_publish_wizard_views.xml",
         "wizard/tiktok_profile_wizard_views.xml",

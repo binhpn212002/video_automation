@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_music_video_bulk_wizard_form" model="ir.ui.view">
+        <field name="name">music.video.bulk.wizard.form</field>
+        <field name="model">music.video.bulk.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Tạo Video Ca Nhạc Hàng Loạt">
+                <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
+                    <div>
+                        <i class="fa fa-magic me-2"></i>
+                        <b>Tạo Video Ca Nhạc Hàng Loạt:</b> Hệ thống sẽ duyệt qua danh sách bài hát đã chọn, tự động phối ngẫu nhiên (hoặc xoay vòng) với kho ảnh Background &amp; Nhân vật để tạo ra hàng loạt video 9:16 chất lượng cao.
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-primary fs-6 me-1"><field name="audio_count"/> Audio</span>
+                        <span class="badge bg-secondary fs-6 me-1"><field name="bg_count"/> Background</span>
+                        <span class="badge bg-success fs-6"><field name="char_count"/> Nhân vật</span>
+                    </div>
+                </div>
+
+                <notebook>
+                    <page string="1. Chọn Dữ Liệu Tạo Video" name="page_data_selection">
+                        <group string="Danh Sách Bài Hát / Audio MP3 (Quyết định số lượng video sinh ra)">
+                            <div class="mb-2">
+                                <button name="action_select_all_audios" type="object"
+                                        string="Chọn Tất Cả Audio Có Sẵn Trên R2" class="btn-outline-primary btn-sm" icon="fa-check-square-o"/>
+                            </div>
+                            <field name="audio_ids" widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Chọn danh sách bài hát cần render video..."/>
+                        </group>
+
+                        <group>
+                            <group string="Kho Ảnh Background">
+                                <div class="mb-2">
+                                    <button name="action_select_all_backgrounds" type="object"
+                                            string="Chọn Tất Cả Background R2" class="btn-outline-secondary btn-sm" icon="fa-image"/>
+                                </div>
+                                <field name="bg_image_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       placeholder="Chọn danh sách ảnh background..."/>
+                                <field name="bg_selection_mode"/>
+                            </group>
+                            <group string="Kho Ảnh Nhân Vật / Ca Sĩ">
+                                <div class="mb-2">
+                                    <button name="action_select_all_characters" type="object"
+                                            string="Chọn Tất Cả Nhân Vật R2" class="btn-outline-secondary btn-sm" icon="fa-user"/>
+                                </div>
+                                <field name="character_image_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       placeholder="Chọn danh sách ảnh nhân vật (PNG tách nền)..."/>
+                                <field name="character_selection_mode"/>
+                            </group>
+                        </group>
+                    </page>
+
+                    <page string="2. Bố Cục &amp; Hiệu Ứng Âm Nhạc" name="page_effects">
+                        <group>
+                            <group string="Bố Cục &amp; Sóng Nhạc (Visualizer)">
+                                <field name="music_layout"/>
+                                <field name="visualizer_style"/>
+                                <field name="visualizer_color"/>
+                            </group>
+                            <group string="Hiệu Ứng Không Khí &amp; Beat Pulse">
+                                <field name="particle_effect"/>
+                                <field name="music_preset"/>
+                                <field name="effect_preset"/>
+                            </group>
+                        </group>
+                        <group string="Cấu Hình Lưu Trữ &amp; Thời Lượng">
+                            <group>
+                                <field name="name_prefix"/>
+                                <field name="storage_id" options="{'no_create': True}"/>
+                            </group>
+                            <group>
+                                <field name="max_duration"/>
+                            </group>
+                        </group>
+                    </page>
+                </notebook>
+
+                <footer>
+                    <button name="action_generate_bulk"
+                            string="Bắt Đầu Tạo Hàng Loạt Video Ngay"
+                            type="object"
+                            class="btn-primary"
+                            icon="fa-play-circle"
+                            confirm="Hệ thống sẽ render hàng loạt video ca nhạc cho tất cả bài hát đã chọn. Quá trình này có thể mất vài phút tùy số lượng bài hát. Bạn có muốn tiếp tục?"/>
+                    <button string="Hủy" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_music_video_bulk_wizard" model="ir.actions.act_window">
+        <field name="name">Tạo Video Ca Nhạc Hàng Loạt</field>
+        <field name="res_model">music.video.bulk.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

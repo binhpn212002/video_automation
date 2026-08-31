@@ -641,7 +641,8 @@ def _prepare_character_image(image_path, output_path, layout="spotify_card", cor
     - Vầng sáng Ambient Glow + Đổ bóng mờ 3D (Soft Drop Shadow) tạo chiều sâu điện ảnh.
     - Đĩa than cổ điển với rãnh vinyl tinh xảo.
     """
-    from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps, WebPImagePlugin
+    Image.init()
 
     glow_colors = {
         "cyan_neon": (0, 210, 255, 120),
@@ -915,7 +916,8 @@ def _generate_visualizer_overlay_video(
         "-pix_fmt", "rgba",
         "-r", str(fps),
         "-i", "-",
-        "-c:v", "png",
+        "-c:v", "qtrle",
+        "-threads", "0",
         output_mov_path,
     ]
 
@@ -1161,7 +1163,8 @@ def generate_music_video(
             "-map", "[vout]",
             "-map", "2:a:0",
             "-c:v", "libx264",
-            "-preset", "veryfast",
+            "-preset", "ultrafast",
+            "-threads", "0",
             "-crf", "22",
             "-r", "30",
             "-af", f"afade=t=out:st={audio_fade_st:.2f}:d=0.8",

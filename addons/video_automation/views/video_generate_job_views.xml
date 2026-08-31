@@ -11,10 +11,14 @@
                   decoration-success="state == 'completed'"
                   decoration-danger="state == 'failed'">
                 <field name="name"/>
-                <field name="image_id"/>
+                <field name="job_type" widget="badge"
+                       decoration-primary="job_type == 'music_video'"
+                       decoration-info="job_type == 'affiliate'"/>
+                <field name="output_video_name" optional="show"/>
+                <field name="character_image_id" optional="show"/>
+                <field name="bg_image_id" optional="hide"/>
+                <field name="image_id" optional="hide"/>
                 <field name="audio_id"/>
-                <field name="motion_effect"/>
-                <field name="effect_preset"/>
                 <field name="duration" widget="float_time"/>
                 <field name="create_date" string="Thời Gian Tạo"/>
                 <field name="finish_date" string="Hoàn Thành"/>
@@ -36,7 +40,7 @@
                 <header>
                     <button name="action_run_job"
                             type="object"
-                            string="Thực Thi Job"
+                            string="Thực Thi Job Ngay"
                             class="btn-primary"
                             invisible="state == 'completed'"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,processing,completed"/>
@@ -47,21 +51,34 @@
                         <h1>
                             <field name="name"/>
                         </h1>
+                        <h3>
+                            <field name="output_video_name" placeholder="Tên video dự kiến..."/>
+                        </h3>
                     </div>
                     <group>
-                        <group string="Nguồn &amp; Cấu Hình">
-                            <field name="image_id" options="{'no_create': True}"/>
+                        <group string="Loại Video &amp; Nguồn">
+                            <field name="job_type"/>
+                            <field name="image_id" options="{'no_create': True}" invisible="job_type != 'affiliate'"/>
+                            <field name="bg_image_id" options="{'no_create': True}" invisible="job_type != 'music_video'"/>
+                            <field name="character_image_id" options="{'no_create': True}" invisible="job_type != 'music_video'"/>
                             <field name="audio_id" options="{'no_create': True}"/>
                             <field name="storage_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Bố Cục &amp; Hiệu Ứng" invisible="job_type != 'music_video'">
+                            <field name="music_layout"/>
+                            <field name="visualizer_style"/>
+                            <field name="visualizer_color"/>
+                            <field name="particle_effect"/>
+                            <field name="music_preset"/>
+                            <field name="effect_preset"/>
+                            <field name="max_duration"/>
+                        </group>
+                        <group string="Cấu Hình Affiliate" invisible="job_type != 'affiliate'">
                             <field name="motion_effect"/>
                             <field name="effect_preset"/>
                             <field name="flash_effect"/>
-                        </group>
-                        <group string="Nội Dung &amp; Text">
                             <field name="hook_text"/>
                             <field name="cta_text"/>
-                            <field name="create_date" readonly="1"/>
-                            <field name="finish_date" readonly="1"/>
                         </group>
                     </group>
 
@@ -69,6 +86,7 @@
                         <field name="video_id" readonly="1"/>
                         <field name="video_url" widget="url" readonly="1"/>
                         <field name="duration" readonly="1"/>
+                        <field name="finish_date" readonly="1"/>
                     </group>
 
                     <div invisible="not error_message" class="alert alert-danger" role="alert">
@@ -85,12 +103,12 @@
 
     <!-- Main Action -->
     <record id="action_video_generate_job" model="ir.actions.act_window">
-        <field name="name">Tiến Trình Tạo Video (Jobs)</field>
+        <field name="name">Tiến Trình Tạo Video (Render Jobs)</field>
         <field name="res_model">video.generate.job</field>
         <field name="view_mode">tree,form</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Danh sách các Job tạo Video (REST API và Background).
+                Danh sách các Job tạo Video chạy ngầm (Background Workers).
             </p>
         </field>
     </record>
