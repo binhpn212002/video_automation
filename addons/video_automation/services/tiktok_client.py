@@ -76,10 +76,10 @@ class TikTokClient:
         if not scope:
             scope = "user.info.basic,user.info.profile,user.info.stats,video.publish,video.upload,video.list"
         params = {
-            "client_key": self.app.client_key,
+            "client_key": (self.app.client_key or "").strip(),
             "scope": scope,
             "response_type": "code",
-            "redirect_uri": self.app.redirect_uri,
+            "redirect_uri": (self.app.redirect_uri or "").strip(),
             "state": state,
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
@@ -88,14 +88,15 @@ class TikTokClient:
 
     def exchange_code(self, code, code_verifier):
         payload = {
-            "client_key": self.app.client_key,
-            "client_secret": self.app.client_secret,
-            "code": code,
+            "client_key": (self.app.client_key or "").strip(),
+            "client_secret": (self.app.client_secret or "").strip(),
+            "code": (code or "").strip(),
             "grant_type": "authorization_code",
-            "redirect_uri": self.app.redirect_uri,
-            "code_verifier": code_verifier,
+            "redirect_uri": (self.app.redirect_uri or "").strip(),
+            "code_verifier": (code_verifier or "").strip(),
         }
-        resp = _request("POST", TOKEN_URL, data=payload, timeout=30)
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        resp = _request("POST", TOKEN_URL, headers=headers, data=payload, timeout=30)
         data = resp.json() if resp.content else {}
         if resp.status_code >= 400:
             _logger.error("TikTok token exchange failed: %s", data or resp.text)
@@ -111,12 +112,13 @@ class TikTokClient:
 
     def refresh_access_token(self, refresh_token):
         payload = {
-            "client_key": self.app.client_key,
-            "client_secret": self.app.client_secret,
+            "client_key": (self.app.client_key or "").strip(),
+            "client_secret": (self.app.client_secret or "").strip(),
             "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
+            "refresh_token": (refresh_token or "").strip(),
         }
-        resp = _request("POST", TOKEN_URL, data=payload, timeout=30)
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        resp = _request("POST", TOKEN_URL, headers=headers, data=payload, timeout=30)
         data = resp.json() if resp.content else {}
         if resp.status_code >= 400:
             _logger.error("TikTok token refresh failed: %s", data or resp.text)
@@ -127,7 +129,7 @@ class TikTokClient:
 
     def get_user_info(self, access_token, fields=None):
         """Fetch user profile after OAuth (returns user dict for backward compatibility)."""
-        res = self.get_user_info_full(access_token, fields=fields)
+        res = self.get_user_info_full((access_token or "").strip(), fields=fields)
         return res.get("user") or {}
 
     def get_user_info_full(self, access_token, fields=None):
