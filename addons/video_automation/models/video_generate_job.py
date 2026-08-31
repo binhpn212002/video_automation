@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import threading
+import time
 import uuid
 
 import odoo
@@ -26,29 +27,42 @@ def _make_workdir(prefix):
 
 
 def _run_jobs_in_background(db_name, uid, job_ids):
-    """Background worker thread to sequentially execute video rendering jobs without HTTP timeout."""
+    """Background worker thread to sequentially execute video rendering jobs with fresh DB cursors and auto-retry."""
     _logger.info("Background video worker thread started for %s jobs...", len(job_ids))
-    try:
-        with odoo.registry(db_name).cursor() as cr:
-            env = api.Environment(cr, uid, {})
-            for jid in job_ids:
-                job = env["video.generate.job"].browse(jid)
-                if not job.exists() or job.state == "completed":
-                    continue
-                try:
+    for jid in job_ids:
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                with odoo.registry(db_name).cursor() as cr:
+                    env = api.Environment(cr, uid, {})
+                    job = env["video.generate.job"].browse(jid)
+                    if not job.exists() or job.state == "completed":
+                        break
                     job._execute_single_job()
                     cr.commit()
-                except Exception as exc:
-                    cr.rollback()
-                    _logger.exception("Background render error on job %s: %s", jid, exc)
+                    break
+            except Exception as exc:
+                _logger.warning("Attempt %s/%s for job %s encountered: %s", attempt + 1, max_attempts, jid, exc)
+                if attempt == max_attempts - 1:
+                    _logger.exception("Background render permanently failed for job %s: %s", jid, exc)
                     try:
-                        job.write({"state": "failed", "error_message": str(exc), "finish_date": fields.Datetime.now()})
-                        cr.commit()
+                        with odoo.registry(db_name).cursor() as cr_err:
+                            env_err = api.Environment(cr_err, uid, {})
+                            job_err = env_err["video.generate.job"].browse(jid)
+                            if job_err.exists():
+                                job_err.write(
+                                    {
+                                        "state": "failed",
+                                        "error_message": str(exc),
+                                        "finish_date": fields.Datetime.now(),
+                                    }
+                                )
+                                cr_err.commit()
                     except Exception:
                         pass
-        _logger.info("Background video worker thread finished processing %s jobs.", len(job_ids))
-    except Exception as exc:
-        _logger.exception("Fatal error in background video worker thread: %s", exc)
+                else:
+                    time.sleep(1.0)
+    _logger.info("Background video worker thread finished processing %s jobs.", len(job_ids))
 
 
 class VideoGenerateJob(models.Model):
