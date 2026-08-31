@@ -142,7 +142,7 @@ class VideoLibrary(models.Model):
         [
             ("none", "Không có"),
             ("snow_fall", "Tuyết rơi lãng mạn (Snow Fall)"),
-            ("rain_drops", "Giọt mưa rơi mộng ảo (Rain Drops)"),
+            ("rain_drops", "Giọt mưa rơi (Rain Drops)"),
             ("dust_bokeh", "Hạt bụi sáng (Dust & Bokeh)"),
             ("stage_lights", "Tia đèn sân khấu (Stage Lights)"),
         ],

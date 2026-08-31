@@ -5,6 +5,10 @@
         <field name="model">audio.library</field>
         <field name="arch" type="xml">
             <tree string="Thư Viện Audio">
+                <header>
+                    <button name="action_open_deduplicate_wizard" type="object"
+                            string="Dọn Dẹp Trùng Lặp" class="btn-secondary" icon="fa-filter"/>
+                </header>
                 <field name="name"/>
                 <field name="bpm"/>
                 <field name="beat_status" widget="badge"

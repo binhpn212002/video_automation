@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_audio_deduplicate_wizard_form" model="ir.ui.view">
+        <field name="name">audio.deduplicate.wizard.form</field>
+        <field name="model">audio.deduplicate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Dọn Dẹp Audio Trùng Lặp">
+                <group>
+                    <group>
+                        <field name="total_audio_count"/>
+                        <field name="duplicate_group_count"/>
+                        <field name="duplicate_record_count"/>
+                    </group>
+                    <group>
+                        <field name="reassign_videos"/>
+                    </group>
+                </group>
+
+                <notebook>
+                    <page string="Danh Sách Trùng Lặp Cần Dọn Dẹp" name="page_preview">
+                        <field name="preview_html" widget="html" nolabel="1"/>
+                    </page>
+                </notebook>
+
+                <footer>
+                    <button name="action_deduplicate"
+                            string="Bắt Đầu Dọn Dẹp Trùng Lặp"
+                            type="object"
+                            class="btn-danger"
+                            invisible="duplicate_record_count == 0"
+                            confirm="Bạn có chắc chắn muốn dọn dẹp các bản ghi Audio trùng lặp? Thao tác này sẽ xóa các bản ghi dư thừa và giữ lại bản ghi chuẩn."/>
+                    <button string="Đóng" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_audio_deduplicate_wizard" model="ir.actions.act_window">
+        <field name="name">Dọn Dẹp Audio Trùng</field>
+        <field name="res_model">audio.deduplicate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

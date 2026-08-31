@@ -1,3 +1,4 @@
+from . import audio_deduplicate_wizard
 from . import audio_library_bulk_wizard
 from . import music_video_generate_wizard
 from . import product_image_bulk_wizard

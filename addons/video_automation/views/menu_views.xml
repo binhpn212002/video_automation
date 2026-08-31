@@ -47,6 +47,12 @@
               action="action_audio_library_bulk_wizard"
               sequence="21"/>
 
+    <menuitem id="menu_va_audio_library_deduplicate"
+              name="Dọn Dẹp Audio Trùng"
+              parent="menu_va_library"
+              action="action_audio_deduplicate_wizard"
+              sequence="22"/>
+
     <menuitem id="menu_va_video_generate_job"
               name="Render Jobs"
               parent="menu_va_library"

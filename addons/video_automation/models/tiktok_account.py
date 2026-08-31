@@ -60,20 +60,6 @@ class TikTokAccount(models.Model):
         help="Temporary PKCE verifier for OAuth (cleared after connect).",
     )
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            for field_name in ("access_token", "refresh_token", "open_id", "oauth_code_verifier"):
-                if vals.get(field_name) and isinstance(vals[field_name], str):
-                    vals[field_name] = vals[field_name].strip()
-        return super().create(vals_list)
-
-    def write(self, vals):
-        for field_name in ("access_token", "refresh_token", "open_id", "oauth_code_verifier"):
-            if vals.get(field_name) and isinstance(vals[field_name], str):
-                vals[field_name] = vals[field_name].strip()
-        return super().write(vals)
-
     def action_show_profile(self):
         """Kiểm tra token và mở popup Profile TikTok."""
         self.ensure_one()

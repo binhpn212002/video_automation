@@ -32,7 +32,9 @@ class TikTokPublishQueue(models.Model):
     _order = "scheduled_time asc, id asc"
     _inherit = ["mail.thread"]
 
-    video_id = fields.Many2one("video.library", required=True, ondelete="restrict")
+    video_id = fields.Many2one(
+        "video.library", required=True, ondelete="cascade", index=True
+    )
     tiktok_account_id = fields.Many2one(
         "tiktok.account", required=True, ondelete="cascade"
     )

@@ -9,6 +9,9 @@
                     <group>
                         <field name="storage_id" options="{'no_create': True}"/>
                     </group>
+                    <group>
+                        <field name="handle_duplicates" widget="radio"/>
+                    </group>
                 </group>
                 <div class="alert alert-info" role="alert">
                     Hệ thống sẽ tự động giải nén/tải lên R2 và <b>tự động phân tích Beat (Onset Energy &amp; BPM)</b> cho từng file âm thanh để sẵn sàng ghép video TikTok Affiliate.

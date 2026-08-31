@@ -1033,141 +1033,6 @@ def _generate_visualizer_overlay_video(
     return output_mov_path
 
 
-def _generate_particle_overlay_video(
-    output_mov_path,
-    duration=10.0,
-    fps=30,
-    effect="snow_fall",
-    width=1080,
-    height=1920,
-):
-    """
-    Sinh video hiệu ứng hạt không khí trong suốt (transparent RGBA) bằng Pillow:
-    - snow_fall: Tuyết rơi lãng mạn (hạt tuyết đa kích thước bay lượn chao nghiêng).
-    - rain_drops: Giọt mưa rơi mộng ảo (vệt mưa nghiêng rơi nhanh tốc độ cao).
-    - dust_bokeh: Bụi sáng lấp lánh (vầng sáng Bokeh ấm áp trôi nổi).
-    - stage_lights: Tia sáng sân khấu lấp lánh (ngôi sao 4 cánh nhấp nháy phát quang).
-    """
-    from PIL import Image, ImageDraw
-
-    total_frames = max(1, int(duration * fps))
-    np.random.seed(42)
-
-    if effect == "snow_fall":
-        n = 120
-        x0 = np.random.uniform(0, width, n)
-        y0 = np.random.uniform(0, height, n)
-        speeds = np.random.uniform(3.0, 7.5, n)
-        sizes = np.random.choice([2, 3, 4, 5, 7, 9], n, p=[0.3, 0.3, 0.2, 0.1, 0.05, 0.05])
-        alphas = np.random.randint(130, 245, n)
-        sway_freqs = np.random.uniform(0.04, 0.09, n)
-        sway_amps = np.random.uniform(15, 40, n)
-        phases = np.random.uniform(0, math.pi * 2, n)
-    elif effect == "rain_drops":
-        n = 160
-        x0 = np.random.uniform(0, width + 400, n)
-        y0 = np.random.uniform(0, height, n)
-        speeds = np.random.uniform(40.0, 70.0, n)
-        lengths = np.random.uniform(35, 65, n)
-        alphas = np.random.randint(100, 200, n)
-        slant_x = -12
-    elif effect == "dust_bokeh":
-        n = 60
-        x0 = np.random.uniform(50, width - 50, n)
-        y0 = np.random.uniform(0, height, n)
-        speeds_y = np.random.uniform(-1.8, 1.8, n)
-        sizes = np.random.choice([4, 6, 8, 12, 16], n, p=[0.3, 0.3, 0.2, 0.1, 0.1])
-        alphas = np.random.randint(80, 190, n)
-        pulse_speeds = np.random.uniform(0.05, 0.12, n)
-        phases = np.random.uniform(0, math.pi * 2, n)
-    elif effect == "stage_lights":
-        n = 50
-        x0 = np.random.uniform(60, width - 60, n)
-        y0 = np.random.uniform(100, height - 100, n)
-        twinkle_speeds = np.random.uniform(0.08, 0.20, n)
-        phases = np.random.uniform(0, math.pi * 2, n)
-        sizes = np.random.uniform(4, 10, n)
-    else:
-        return None
-
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-f", "rawvideo",
-        "-vcodec", "rawvideo",
-        "-s", f"{width}x{height}",
-        "-pix_fmt", "rgba",
-        "-r", str(fps),
-        "-i", "-",
-        "-c:v", "png",
-        output_mov_path,
-    ]
-
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    try:
-        for f in range(total_frames):
-            img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-            draw = ImageDraw.Draw(img)
-
-            if effect == "snow_fall":
-                cur_y = (y0 + f * speeds) % height
-                cur_x = (x0 + np.sin(f * sway_freqs + phases) * sway_amps) % width
-                for i in range(n):
-                    px, py = cur_x[i], cur_y[i]
-                    r = sizes[i]
-                    a = alphas[i]
-                    draw.ellipse([(px - r, py - r), (px + r, py + r)], fill=(255, 255, 255, a))
-
-            elif effect == "rain_drops":
-                cur_y = (y0 + f * speeds) % height
-                cur_x = (x0 + f * slant_x * (speeds / 45.0)) % (width + 300) - 150
-                for i in range(n):
-                    x1, y1 = cur_x[i], cur_y[i]
-                    l = lengths[i]
-                    x2 = x1 + slant_x * (l / 45.0)
-                    y2 = y1 + l
-                    a = alphas[i]
-                    draw.line([(x1, y1), (x2, y2)], fill=(210, 230, 255, a), width=2)
-
-            elif effect == "dust_bokeh":
-                cur_y = (y0 + f * speeds_y) % height
-                for i in range(n):
-                    px, py = x0[i], cur_y[i]
-                    r = sizes[i]
-                    pulse = (math.sin(f * pulse_speeds[i] + phases[i]) + 1.0) / 2.0
-                    a = int(alphas[i] * (0.5 + 0.5 * pulse))
-                    draw.ellipse([(px - r * 1.5, py - r * 1.5), (px + r * 1.5, py + r * 1.5)], fill=(255, 220, 150, a // 3))
-                    draw.ellipse([(px - r, py - r), (px + r, py + r)], fill=(255, 240, 200, a))
-
-            elif effect == "stage_lights":
-                for i in range(n):
-                    px, py = x0[i], y0[i]
-                    twinkle = (math.sin(f * twinkle_speeds[i] + phases[i]) + 1.0) / 2.0
-                    s = sizes[i] * (0.3 + 0.7 * twinkle)
-                    a = int(220 * twinkle)
-                    if a > 20:
-                        draw.line([(px - s * 2, py), (px + s * 2, py)], fill=(255, 255, 255, a), width=2)
-                        draw.line([(px, py - s * 2), (px, py + s * 2)], fill=(255, 255, 255, a), width=2)
-                        draw.ellipse([(px - s * 0.5, py - s * 0.5), (px + s * 0.5, py + s * 0.5)], fill=(255, 255, 255, a))
-
-            proc.stdin.write(img.tobytes())
-
-        proc.stdin.close()
-        proc.wait()
-    except Exception as exc:
-        _logger.warning("Error generating particle video: %s", exc)
-        if proc and proc.stdin:
-            try:
-                proc.stdin.close()
-            except Exception:
-                pass
-            proc.kill()
-        raise
-
-    return output_mov_path
-
-
 def generate_music_video(
     bg_image_path,
     character_image_path,
@@ -1176,7 +1041,7 @@ def generate_music_video(
     layout="spotify_card",
     visualizer_style="spectrum_bars",
     visualizer_color="cyan_neon",
-    particle_effect="snow_fall",
+    particle_effect="dust_bokeh",
     music_preset="lofi_chill",
     effect_preset="normal",
     max_duration=0.0,
@@ -1185,7 +1050,6 @@ def generate_music_video(
     Sinh video ca nhạc 9:16 (1080x1920, 30 FPS) chuẩn Aesthetic TikTok / Lofi Shorts:
     - Background: Phông nền Cover nghệ thuật + Vignette chiều sâu
     - Character: Card bo góc 3D tỏa sáng Ambient Glow / Đĩa than xoay 360° chậm rãi
-    - Atmosphere: Hiệu ứng tuyết rơi lãng mạn, mưa rơi mộng ảo, bụi sáng Bokeh
     - Audio Visualizer: Sóng nhạc FFT Spectrum / Waves realtime sang trọng
     - File Nhạc MP3: Fade-out êm dịu ở cuối clip
     """
@@ -1207,12 +1071,6 @@ def generate_music_video(
         vis_mov_path = vis_tmp.name
         vis_tmp.close()
 
-    particle_mov_path = None
-    if particle_effect and particle_effect != "none":
-        particle_tmp = tempfile.NamedTemporaryFile(suffix="_particle.mov", delete=False)
-        particle_mov_path = particle_tmp.name
-        particle_tmp.close()
-
     try:
         _prepare_character_image(
             image_path=character_image_path,
@@ -1231,16 +1089,6 @@ def generate_music_video(
                 style=visualizer_style,
                 theme=visualizer_color,
                 layout=layout,
-            )
-
-        if particle_effect and particle_effect != "none" and particle_mov_path:
-            _generate_particle_overlay_video(
-                output_mov_path=particle_mov_path,
-                duration=audio_duration,
-                fps=30,
-                effect=particle_effect,
-                width=1080,
-                height=1920,
             )
 
         filter_steps = []
@@ -1263,29 +1111,22 @@ def generate_music_video(
             "-i", audio_path,
         ]
 
-        next_idx = 3
-
         vis_input_idx = None
         if visualizer_style != "none" and vis_mov_path and os.path.exists(vis_mov_path):
-            vis_input_idx = next_idx
+            vis_input_idx = len(inputs) // 2 + 1 if "-loop" in inputs else 3
+            # Index of vis is 3
             inputs.extend(["-i", vis_mov_path])
-            next_idx += 1
-
-        particle_input_idx = None
-        if particle_effect and particle_effect != "none" and particle_mov_path and os.path.exists(particle_mov_path):
-            particle_input_idx = next_idx
-            inputs.extend(["-i", particle_mov_path])
-            next_idx += 1
+            vis_idx = 3
 
         # Overlay layers
-        if visualizer_style == "radial_circle" and vis_input_idx is not None:
+        if visualizer_style == "radial_circle" and vis_mov_path:
             if layout in ("spinning_vinyl", "vinyl_retro"):
                 vis_y = 267
             elif layout == "circular_avatar":
                 vis_y = 170
             else:
                 vis_y = 200
-            filter_steps.append(f"[bg][{vis_input_idx}:v]overlay=(W-w)/2:{vis_y}[bg_vis]")
+            filter_steps.append(f"[bg][{vis_idx}:v]overlay=(W-w)/2:{vis_y}[bg_vis]")
             current_bg = "[bg_vis]"
         else:
             current_bg = "[bg]"
@@ -1302,14 +1143,9 @@ def generate_music_video(
 
         current_v = "[stage0]"
 
-        # Layer 2: Atmospheric Particles Overlay (Snow / Rain / Bokeh)
-        if particle_input_idx is not None:
-            filter_steps.append(f"{current_v}[{particle_input_idx}:v]overlay=0:0[stage_p]")
-            current_v = "[stage_p]"
-
-        # Layer 3: Dock Audio Visualizer (spectrum_bars / sine_wave)
-        if visualizer_style != "none" and visualizer_style != "radial_circle" and vis_input_idx is not None:
-            filter_steps.append(f"{current_v}[{vis_input_idx}:v]overlay=(W-w)/2:1340[stage1]")
+        # Layer 2: Dock Audio Visualizer (spectrum_bars / sine_wave)
+        if visualizer_style != "none" and visualizer_style != "radial_circle" and vis_mov_path:
+            filter_steps.append(f"{current_v}[{vis_idx}:v]overlay=(W-w)/2:1340[stage1]")
             current_v = "[stage1]"
 
         filter_steps.append(f"{current_v}format=yuv420p[vout]")
@@ -1353,11 +1189,6 @@ def generate_music_video(
         if vis_mov_path and os.path.exists(vis_mov_path):
             try:
                 os.remove(vis_mov_path)
-            except Exception:
-                pass
-        if particle_mov_path and os.path.exists(particle_mov_path):
-            try:
-                os.remove(particle_mov_path)
             except Exception:
                 pass
 

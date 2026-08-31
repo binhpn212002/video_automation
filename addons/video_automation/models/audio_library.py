@@ -5,6 +5,7 @@ import mimetypes
 import os
 import shutil
 import tempfile
+import unicodedata
 
 from odoo import api, fields, models
 from odoo.exceptions import UserError
@@ -13,6 +14,13 @@ from ..services.ffmpeg_service import detect_beats, probe_media
 from ..services.r2_client import R2Client, make_flat_object_key
 
 _logger = logging.getLogger(__name__)
+
+
+def _normalize_audio_name(name):
+    """Chuẩn hóa tên Audio: NFC Unicode + strip + lowercase để so sánh trùng lặp chính xác."""
+    if not name:
+        return ""
+    return unicodedata.normalize("NFC", str(name)).strip().lower()
 
 
 def _make_workdir(prefix):
@@ -214,6 +222,18 @@ class AudioLibrary(models.Model):
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("name") and isinstance(vals["name"], str):
+                vals["name"] = unicodedata.normalize("NFC", vals["name"]).strip()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get("name") and isinstance(vals["name"], str):
+            vals["name"] = unicodedata.normalize("NFC", vals["name"]).strip()
+        return super().write(vals)
+
     def unlink(self):
         """Xóa file audio trên Cloudflare R2 khi xóa record."""
         for audio in self:
@@ -224,5 +244,96 @@ class AudioLibrary(models.Model):
                 except Exception as exc:
                     _logger.warning("Không thể xóa file R2 khi xóa audio %s (%s): %s", audio.id, audio.storage_path, exc)
         return super().unlink()
+
+    @api.model
+    def _pick_best_keeper(self, recs):
+        """Chọn bản ghi tốt nhất trong nhóm trùng để giữ lại."""
+        def _score(r):
+            score = 0.0
+            if r.storage_path:
+                score += 1000.0
+            if r.file_size:
+                score += 100.0
+            if r.beat_status == "detected" and r.beat_data:
+                score += 500.0
+            if r.duration:
+                score += float(r.duration)
+            if r.source_video_id:
+                score += 10.0
+            score -= (r.id or 0) * 0.0001
+            return score
+
+        return max(recs, key=_score)
+
+    @api.model
+    def deduplicate_by_name(self, reassign_videos=True):
+        """
+        Dọn dẹp các bản ghi Audio trùng lặp theo Name (so sánh 2 tên trùng nhau).
+        - Chuẩn hóa Unicode NFC + strip + lowercase.
+        - Giữ lại bản ghi ưu tiên tốt nhất (ưu tiên có file R2, có beat analysis, thời lượng dài).
+        - Re-assign video.library và video.generate.job trỏ sang Keeper record.
+        - Xóa các bản ghi duplicate an toàn (tránh xóa nhầm file R2 của Keeper nếu trỏ chung storage_path).
+        """
+        from collections import defaultdict
+        all_audios = self.search([], order="id asc")
+        by_name = defaultdict(list)
+        for a in all_audios:
+            norm_name = _normalize_audio_name(a.name)
+            if norm_name:
+                by_name[norm_name].append(a)
+
+        dup_groups = {k: v for k, v in by_name.items() if len(v) > 1}
+        if not dup_groups:
+            return {"deleted_count": 0, "group_count": 0, "reassigned_videos": 0}
+
+        Video = self.env["video.library"].sudo()
+        Job = self.env["video.generate.job"].sudo()
+
+        total_deleted = 0
+        total_reassigned = 0
+
+        for name, recs in dup_groups.items():
+            keeper = self._pick_best_keeper(recs)
+            duplicates = [r for r in recs if r.id != keeper.id]
+
+            for dup in duplicates:
+                if reassign_videos:
+                    videos = Video.search([("audio_id", "=", dup.id)])
+                    if videos:
+                        videos.write({"audio_id": keeper.id})
+                        total_reassigned += len(videos)
+
+                    jobs = Job.search([("audio_id", "=", dup.id)])
+                    if jobs:
+                        jobs.write({"audio_id": keeper.id})
+
+                # Safety check: If duplicate points to the exact same storage_path as keeper,
+                # clear storage_path before unlink() so unlink() doesn't delete keeper's R2 object!
+                if dup.storage_path and keeper.storage_path and dup.storage_path == keeper.storage_path:
+                    dup.write({"storage_path": False})
+
+                dup.unlink()
+                total_deleted += 1
+
+        _logger.info(
+            "Audio deduplication completed: removed %s duplicates across %s groups, reassigned %s videos.",
+            total_deleted,
+            len(dup_groups),
+            total_reassigned,
+        )
+        return {
+            "deleted_count": total_deleted,
+            "group_count": len(dup_groups),
+            "reassigned_videos": total_reassigned,
+        }
+
+    def action_open_deduplicate_wizard(self):
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Dọn Dẹp Audio Trùng Lặp",
+            "res_model": "audio.deduplicate.wizard",
+            "view_mode": "form",
+            "target": "new",
+        }
 
 
