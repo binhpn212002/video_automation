@@ -34,12 +34,6 @@
               action="action_music_video_generate_wizard"
               sequence="12"/>
 
-    <menuitem id="menu_va_music_video_batch_wizard"
-              name="Gen Video Ca Nhạc Hàng Loạt"
-              parent="menu_va_library"
-              action="action_music_video_batch_wizard"
-              sequence="13"/>
-
 
     <menuitem id="menu_va_audio_library"
               name="Audio"
