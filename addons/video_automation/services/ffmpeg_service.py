@@ -651,131 +651,150 @@ def _prepare_character_image(image_path, output_path, layout="spotify_card", cor
     }
     glow_col = glow_colors.get(theme_color, glow_colors["cyan_neon"])
 
-    with Image.open(image_path) as raw_img:
-        raw_img = raw_img.convert("RGBA")
-        orig_w, orig_h = raw_img.size
+    try:
+        raw_img = Image.open(image_path)
+        raw_img.load()
+    except Exception as exc:
+        _logger.warning("PIL cannot directly identify image %s (%s). Converting via ffmpeg...", image_path, exc)
+        clean_tmp = tempfile.NamedTemporaryFile(suffix="_clean_char.png", delete=False)
+        clean_path = clean_tmp.name
+        clean_tmp.close()
+        try:
+            cmd = ["ffmpeg", "-y", "-i", image_path, "-vframes", "1", clean_path]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            raw_img = Image.open(clean_path)
+            raw_img.load()
+        finally:
+            if os.path.exists(clean_path):
+                try:
+                    os.remove(clean_path)
+                except OSError:
+                    pass
 
-        # 1. Bố cục Đĩa than Vintage (Vinyl Record)
-        if layout in ("spinning_vinyl", "vinyl_retro"):
-            vinyl_size = 660
-            vinyl = Image.new("RGBA", (vinyl_size, vinyl_size), (0, 0, 0, 0))
-            v_draw = ImageDraw.Draw(vinyl)
+    raw_img = raw_img.convert("RGBA")
+    orig_w, orig_h = raw_img.size
 
-            # Thân đĩa than màu đen than sang trọng
-            v_draw.ellipse([(0, 0), (vinyl_size, vinyl_size)], fill=(18, 18, 22, 255), outline=(55, 55, 60, 255), width=2)
+    # 1. Bố cục Đĩa than Vintage (Vinyl Record)
+    if layout in ("spinning_vinyl", "vinyl_retro"):
+        vinyl_size = 660
+        vinyl = Image.new("RGBA", (vinyl_size, vinyl_size), (0, 0, 0, 0))
+        v_draw = ImageDraw.Draw(vinyl)
 
-            # Các đường rãnh vinyl đồng tâm
-            cx, cy = vinyl_size // 2, vinyl_size // 2
-            for r in range(150, 318, 10):
-                v_draw.ellipse([(cx - r, cy - r), (cx + r, cy + r)], outline=(32, 32, 38, 255), width=1)
+        # Thân đĩa than màu đen than sang trọng
+        v_draw.ellipse([(0, 0), (vinyl_size, vinyl_size)], fill=(18, 18, 22, 255), outline=(55, 55, 60, 255), width=2)
 
-            # Nhãn tròn nhân vật ở trung tâm (avatar 270x270)
-            avatar_size = 270
-            avatar = ImageOps.fit(raw_img, (avatar_size, avatar_size), Image.Resampling.LANCZOS)
-            factor = 4
-            a_mask = Image.new("L", (avatar_size * factor, avatar_size * factor), 0)
-            a_draw = ImageDraw.Draw(a_mask)
-            a_draw.ellipse([(0, 0), (avatar_size * factor, avatar_size * factor)], fill=255)
-            a_mask = a_mask.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
-            avatar.putalpha(a_mask)
+        # Các đường rãnh vinyl đồng tâm
+        cx, cy = vinyl_size // 2, vinyl_size // 2
+        for r in range(150, 318, 10):
+            v_draw.ellipse([(cx - r, cy - r), (cx + r, cy + r)], outline=(32, 32, 38, 255), width=1)
 
-            # Viền nhãn đĩa
-            v_draw.ellipse(
-                [(cx - avatar_size // 2 - 2, cy - avatar_size // 2 - 2), (cx + avatar_size // 2 + 2, cy + avatar_size // 2 + 2)],
-                outline=(255, 255, 255, 200),
-                width=2,
-            )
-            vinyl.paste(avatar, (cx - avatar_size // 2, cy - avatar_size // 2), avatar)
+        # Nhãn tròn nhân vật ở trung tâm (avatar 270x270)
+        avatar_size = 270
+        avatar = ImageOps.fit(raw_img, (avatar_size, avatar_size), Image.Resampling.LANCZOS)
+        factor = 4
+        a_mask = Image.new("L", (avatar_size * factor, avatar_size * factor), 0)
+        a_draw = ImageDraw.Draw(a_mask)
+        a_draw.ellipse([(0, 0), (avatar_size * factor, avatar_size * factor)], fill=255)
+        a_mask = a_mask.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
+        avatar.putalpha(a_mask)
 
-            # Lỗ trục chính giữa (spindle hole)
-            v_draw.ellipse([(cx - 8, cy - 8), (cx + 8, cy + 8)], fill=(0, 0, 0, 0), outline=(255, 255, 255, 120), width=1)
+        # Viền nhãn đĩa
+        v_draw.ellipse(
+            [(cx - avatar_size // 2 - 2, cy - avatar_size // 2 - 2), (cx + avatar_size // 2 + 2, cy + avatar_size // 2 + 2)],
+            outline=(255, 255, 255, 200),
+            width=2,
+        )
+        vinyl.paste(avatar, (cx - avatar_size // 2, cy - avatar_size // 2), avatar)
 
-            vinyl.save(output_path, "PNG")
-            return output_path
+        # Lỗ trục chính giữa (spindle hole)
+        v_draw.ellipse([(cx - 8, cy - 8), (cx + 8, cy + 8)], fill=(0, 0, 0, 0), outline=(255, 255, 255, 120), width=1)
 
-        # 2. Bố cục Avatar Tròn (Circular Avatar)
-        elif layout == "circular_avatar":
-            avatar_size = 620
-            img = ImageOps.fit(raw_img, (avatar_size, avatar_size), Image.Resampling.LANCZOS)
-            factor = 4
-            mask = Image.new("L", (avatar_size * factor, avatar_size * factor), 0)
-            draw = ImageDraw.Draw(mask)
-            draw.ellipse([(0, 0), (avatar_size * factor, avatar_size * factor)], fill=255)
-            mask = mask.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
-            img.putalpha(mask)
+        vinyl.save(output_path, "PNG")
+        return output_path
 
-            pad = 60
-            canvas = Image.new("RGBA", (avatar_size + pad * 2, avatar_size + pad * 2), (0, 0, 0, 0))
-            # Ambient glow
-            glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-            g_draw = ImageDraw.Draw(glow)
-            g_draw.ellipse([(pad - 5, pad - 5), (pad + avatar_size + 5, pad + avatar_size + 5)], fill=glow_col)
-            glow = glow.filter(ImageFilter.GaussianBlur(radius=30))
+    # 2. Bố cục Avatar Tròn (Circular Avatar)
+    elif layout == "circular_avatar":
+        avatar_size = 620
+        img = ImageOps.fit(raw_img, (avatar_size, avatar_size), Image.Resampling.LANCZOS)
+        factor = 4
+        mask = Image.new("L", (avatar_size * factor, avatar_size * factor), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse([(0, 0), (avatar_size * factor, avatar_size * factor)], fill=255)
+        mask = mask.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
+        img.putalpha(mask)
 
-            # Dark shadow
-            shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-            s_draw = ImageDraw.Draw(shadow)
-            s_draw.ellipse([(pad + 5, pad + 15), (pad + avatar_size + 5, pad + avatar_size + 15)], fill=(0, 0, 0, 160))
-            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=20))
+        pad = 60
+        canvas = Image.new("RGBA", (avatar_size + pad * 2, avatar_size + pad * 2), (0, 0, 0, 0))
+        # Ambient glow
+        glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        g_draw = ImageDraw.Draw(glow)
+        g_draw.ellipse([(pad - 5, pad - 5), (pad + avatar_size + 5, pad + avatar_size + 5)], fill=glow_col)
+        glow = glow.filter(ImageFilter.GaussianBlur(radius=30))
 
-            canvas.paste(glow, (0, 0), glow)
-            canvas.paste(shadow, (0, 0), shadow)
-            canvas.paste(img, (pad, pad), img)
-            canvas.save(output_path, "PNG")
-            return output_path
+        # Dark shadow
+        shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        s_draw = ImageDraw.Draw(shadow)
+        s_draw.ellipse([(pad + 5, pad + 15), (pad + avatar_size + 5, pad + avatar_size + 15)], fill=(0, 0, 0, 160))
+        shadow = shadow.filter(ImageFilter.GaussianBlur(radius=20))
 
-        # 3. Bố cục Card Sang Trọng (Spotify Card / Modern Card / Glass Card)
-        else:
-            aspect = orig_h / max(orig_w, 1)
-            card_w = 760
-            card_h = int(card_w * aspect)
-            card_h = max(760, min(card_h, 960))
+        canvas.paste(glow, (0, 0), glow)
+        canvas.paste(shadow, (0, 0), shadow)
+        canvas.paste(img, (pad, pad), img)
+        canvas.save(output_path, "PNG")
+        return output_path
 
-            img = ImageOps.fit(raw_img, (card_w, card_h), Image.Resampling.LANCZOS)
-            w, h = card_w, card_h
+    # 3. Bố cục Card Sang Trọng (Spotify Card / Modern Card / Glass Card)
+    else:
+        aspect = orig_h / max(orig_w, 1)
+        card_w = 760
+        card_h = int(card_w * aspect)
+        card_h = max(760, min(card_h, 960))
 
-            factor = 4
-            mask = Image.new("L", (w * factor, h * factor), 0)
-            draw_m = ImageDraw.Draw(mask)
-            r = int(corner_radius * factor)
-            draw_m.rounded_rectangle([(0, 0), (w * factor, h * factor)], radius=r, fill=255)
-            mask = mask.resize((w, h), Image.Resampling.LANCZOS)
+        img = ImageOps.fit(raw_img, (card_w, card_h), Image.Resampling.LANCZOS)
+        w, h = card_w, card_h
 
-            border_mask = Image.new("RGBA", (w * factor, h * factor), (0, 0, 0, 0))
-            b_draw = ImageDraw.Draw(border_mask)
-            bw = int(2 * factor)
-            b_draw.rounded_rectangle(
-                [(bw // 2, bw // 2), (w * factor - bw // 2, h * factor - bw // 2)],
-                radius=r,
-                outline=(255, 255, 255, 180),
-                width=bw,
-            )
-            border_img = border_mask.resize((w, h), Image.Resampling.LANCZOS)
+        factor = 4
+        mask = Image.new("L", (w * factor, h * factor), 0)
+        draw_m = ImageDraw.Draw(mask)
+        r = int(corner_radius * factor)
+        draw_m.rounded_rectangle([(0, 0), (w * factor, h * factor)], radius=r, fill=255)
+        mask = mask.resize((w, h), Image.Resampling.LANCZOS)
 
-            current_alpha = img.split()[-1]
-            final_alpha = ImageChops.multiply(current_alpha, mask)
-            img.putalpha(final_alpha)
-            img.paste(border_img, (0, 0), border_img)
+        border_mask = Image.new("RGBA", (w * factor, h * factor), (0, 0, 0, 0))
+        b_draw = ImageDraw.Draw(border_mask)
+        bw = int(2 * factor)
+        b_draw.rounded_rectangle(
+            [(bw // 2, bw // 2), (w * factor - bw // 2, h * factor - bw // 2)],
+            radius=r,
+            outline=(255, 255, 255, 180),
+            width=bw,
+        )
+        border_img = border_mask.resize((w, h), Image.Resampling.LANCZOS)
 
-            # Tạo Vầng sáng Ambient Glow + Đổ bóng 3D
-            pad = 60
-            canvas = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
+        current_alpha = img.split()[-1]
+        final_alpha = ImageChops.multiply(current_alpha, mask)
+        img.putalpha(final_alpha)
+        img.paste(border_img, (0, 0), border_img)
 
-            glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-            g_draw = ImageDraw.Draw(glow)
-            g_draw.rounded_rectangle([(pad - 6, pad - 6), (pad + w + 6, pad + h + 6)], radius=corner_radius + 6, fill=glow_col)
-            glow = glow.filter(ImageFilter.GaussianBlur(radius=32))
+        # Tạo Vầng sáng Ambient Glow + Đổ bóng 3D
+        pad = 60
+        canvas = Image.new("RGBA", (w + pad * 2, h + pad * 2), (0, 0, 0, 0))
 
-            shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-            s_draw = ImageDraw.Draw(shadow)
-            s_draw.rounded_rectangle([(pad + 5, pad + 16), (pad + w + 5, pad + h + 16)], radius=corner_radius, fill=(0, 0, 0, 160))
-            shadow = shadow.filter(ImageFilter.GaussianBlur(radius=22))
+        glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        g_draw = ImageDraw.Draw(glow)
+        g_draw.rounded_rectangle([(pad - 6, pad - 6), (pad + w + 6, pad + h + 6)], radius=corner_radius + 6, fill=glow_col)
+        glow = glow.filter(ImageFilter.GaussianBlur(radius=32))
 
-            canvas.paste(glow, (0, 0), glow)
-            canvas.paste(shadow, (0, 0), shadow)
-            canvas.paste(img, (pad, pad), img)
-            canvas.save(output_path, "PNG")
-            return output_path
+        shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        s_draw = ImageDraw.Draw(shadow)
+        s_draw.rounded_rectangle([(pad + 5, pad + 16), (pad + w + 5, pad + h + 16)], radius=corner_radius, fill=(0, 0, 0, 160))
+        shadow = shadow.filter(ImageFilter.GaussianBlur(radius=22))
+
+        canvas.paste(glow, (0, 0), glow)
+        canvas.paste(shadow, (0, 0), shadow)
+        canvas.paste(img, (pad, pad), img)
+        canvas.save(output_path, "PNG")
+        return output_path
 
 
 def _extract_pcm_samples(audio_path, target_sr=44100):

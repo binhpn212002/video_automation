@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_music_video_batch_wizard_form" model="ir.ui.view">
+        <field name="name">music.video.batch.wizard.form</field>
+        <field name="model">music.video.batch.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Tạo Hàng Loạt Video Ca Nhạc">
+                <sheet>
+                    <div class="oe_title">
+                        <h2>Tạo Hàng Loạt Video Ca Nhạc (Sinh Jobs)</h2>
+                        <p class="text-muted">
+                            Hệ thống sẽ tự động ghép cặp Ảnh Nền, Nhân Vật và Danh Sách Nhạc để tạo thành các Render Job. Bạn có thể cho chạy ngay, click chạy thủ công từng job hoặc lập lịch để Cron tự render ngầm.
+                        </p>
+                    </div>
+
+                    <group>
+                        <group string="1. Nguồn Ảnh Background">
+                            <field name="bg_selection_mode" widget="radio"/>
+                            <field name="bg_image_id"
+                                   options="{'no_create': True}"
+                                   invisible="bg_selection_mode != 'single'"/>
+                            <field name="bg_image_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   invisible="bg_selection_mode != 'multiple'"/>
+                        </group>
+
+                        <group string="2. Nguồn Ảnh Nhân Vật / Ca Sĩ">
+                            <field name="char_selection_mode" widget="radio"/>
+                            <field name="character_image_id"
+                                   options="{'no_create': True}"
+                                   invisible="char_selection_mode != 'single'"/>
+                            <field name="character_image_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   invisible="char_selection_mode != 'multiple'"/>
+                        </group>
+                    </group>
+
+                    <group string="3. Danh Sách Bài Nhạc MP3 &amp; Quy Tắc Ghép Cặp">
+                        <group>
+                            <field name="audio_selection_mode" widget="radio"/>
+                            <field name="audio_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   invisible="audio_selection_mode != 'selected'"/>
+                            <field name="audio_count"
+                                   invisible="audio_selection_mode != 'least_used'"/>
+                        </group>
+                        <group>
+                            <field name="pair_strategy" widget="radio"/>
+                            <field name="storage_id" options="{'no_create': True}"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Hiệu Ứng &amp; Bố Cục Video">
+                            <group>
+                                <group string="Bố Cục &amp; Preset">
+                                    <field name="music_layout"/>
+                                    <field name="music_preset"/>
+                                    <field name="effect_preset"/>
+                                </group>
+                                <group string="Sóng Nhạc &amp; Không Khí">
+                                    <field name="visualizer_style"/>
+                                    <field name="visualizer_color" invisible="visualizer_style == 'none'"/>
+                                    <field name="particle_effect"/>
+                                    <field name="max_duration"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Lập Lịch &amp; Chế Độ Thực Thi">
+                            <group>
+                                <group string="Chế Độ Thực Thi">
+                                    <field name="execution_mode" widget="radio"/>
+                                    <field name="priority"/>
+                                </group>
+                                <group string="Cài Đặt Lịch Chạy" invisible="execution_mode != 'scheduled'">
+                                    <field name="start_date"/>
+                                    <field name="interval_minutes"/>
+                                    <div class="alert alert-info" role="alert" colspan="2">
+                                        Mỗi job sẽ được đặt lịch giãn cách nhau <field name="interval_minutes" readonly="1"/> phút để Cron tự động thực thi tuần tự, đảm bảo CPU server luôn ổn định.
+                                    </div>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <footer>
+                    <button name="action_create_jobs"
+                            type="object"
+                            string="Tạo Danh Sách Jobs"
+                            class="btn-primary"/>
+                    <button string="Hủy" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_music_video_batch_wizard" model="ir.actions.act_window">
+        <field name="name">Gen Video Ca Nhạc Hàng Loạt</field>
+        <field name="res_model">music.video.batch.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
