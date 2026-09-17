@@ -7,6 +7,7 @@ RUN apt-get update \
     && pip3 install --no-cache-dir \
         boto3==1.35.99 \
         requests==2.32.3 \
+        numpy \
     && mkdir -p /tmp/video_work \
     && chown -R odoo:odoo /tmp/video_work \
     && rm -rf /var/lib/apt/lists/*
