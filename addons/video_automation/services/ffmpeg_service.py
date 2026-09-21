@@ -5,6 +5,12 @@ import os
 import subprocess
 import tempfile
 import numpy as np
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
+try:
+    from PIL import WebPImagePlugin
+except ImportError:
+    pass
+Image.init()
 
 _logger = logging.getLogger(__name__)
 
@@ -643,6 +649,24 @@ def _prepare_character_image(image_path, output_path, layout="spotify_card", cor
     """
     from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
 
+    try:
+        from PIL.Image import Resampling
+        resample_lanczos = Resampling.LANCZOS
+    except (ImportError, AttributeError):
+        try:
+            resample_lanczos = Image.LANCZOS
+        except AttributeError:
+            try:
+                resample_lanczos = Image.ANTIALIAS
+            except AttributeError:
+                resample_lanczos = 1
+
+    def _draw_rounded_rect(draw_ctx, xy, radius, fill=None, outline=None, width=1):
+        if hasattr(draw_ctx, "rounded_rectangle"):
+            draw_ctx.rounded_rectangle(xy, radius=radius, fill=fill, outline=outline, width=width)
+        else:
+            draw_ctx.rectangle(xy, fill=fill, outline=outline, width=width)
+
     glow_colors = {
         "cyan_neon": (0, 210, 255, 120),
         "pink_purple": (255, 60, 180, 120),
@@ -671,12 +695,12 @@ def _prepare_character_image(image_path, output_path, layout="spotify_card", cor
 
             # Nhãn tròn nhân vật ở trung tâm (avatar 270x270)
             avatar_size = 270
-            avatar = ImageOps.fit(raw_img, (avatar_size, avatar_size), Image.Resampling.LANCZOS)
+            avatar = ImageOps.fit(raw_img, (avatar_size, avatar_size), resample_lanczos)
             factor = 4
             a_mask = Image.new("L", (avatar_size * factor, avatar_size * factor), 0)
             a_draw = ImageDraw.Draw(a_mask)
             a_draw.ellipse([(0, 0), (avatar_size * factor, avatar_size * factor)], fill=255)
-            a_mask = a_mask.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
+            a_mask = a_mask.resize((avatar_size, avatar_size), resample_lanczos)
             avatar.putalpha(a_mask)
 
             # Viền nhãn đĩa
@@ -696,12 +720,12 @@ def _prepare_character_image(image_path, output_path, layout="spotify_card", cor
         # 2. Bố cục Avatar Tròn (Circular Avatar)
         elif layout == "circular_avatar":
             avatar_size = 620
-            img = ImageOps.fit(raw_img, (avatar_size, avatar_size), Image.Resampling.LANCZOS)
+            img = ImageOps.fit(raw_img, (avatar_size, avatar_size), resample_lanczos)
             factor = 4
             mask = Image.new("L", (avatar_size * factor, avatar_size * factor), 0)
             draw = ImageDraw.Draw(mask)
             draw.ellipse([(0, 0), (avatar_size * factor, avatar_size * factor)], fill=255)
-            mask = mask.resize((avatar_size, avatar_size), Image.Resampling.LANCZOS)
+            mask = mask.resize((avatar_size, avatar_size), resample_lanczos)
             img.putalpha(mask)
 
             pad = 60
@@ -731,26 +755,27 @@ def _prepare_character_image(image_path, output_path, layout="spotify_card", cor
             card_h = int(card_w * aspect)
             card_h = max(760, min(card_h, 960))
 
-            img = ImageOps.fit(raw_img, (card_w, card_h), Image.Resampling.LANCZOS)
+            img = ImageOps.fit(raw_img, (card_w, card_h), resample_lanczos)
             w, h = card_w, card_h
 
             factor = 4
             mask = Image.new("L", (w * factor, h * factor), 0)
             draw_m = ImageDraw.Draw(mask)
             r = int(corner_radius * factor)
-            draw_m.rounded_rectangle([(0, 0), (w * factor, h * factor)], radius=r, fill=255)
-            mask = mask.resize((w, h), Image.Resampling.LANCZOS)
+            _draw_rounded_rect(draw_m, [(0, 0), (w * factor, h * factor)], radius=r, fill=255)
+            mask = mask.resize((w, h), resample_lanczos)
 
             border_mask = Image.new("RGBA", (w * factor, h * factor), (0, 0, 0, 0))
             b_draw = ImageDraw.Draw(border_mask)
             bw = int(2 * factor)
-            b_draw.rounded_rectangle(
+            _draw_rounded_rect(
+                b_draw,
                 [(bw // 2, bw // 2), (w * factor - bw // 2, h * factor - bw // 2)],
                 radius=r,
                 outline=(255, 255, 255, 180),
                 width=bw,
             )
-            border_img = border_mask.resize((w, h), Image.Resampling.LANCZOS)
+            border_img = border_mask.resize((w, h), resample_lanczos)
 
             current_alpha = img.split()[-1]
             final_alpha = ImageChops.multiply(current_alpha, mask)
@@ -920,9 +945,12 @@ def _generate_visualizer_overlay_video(
     ]
 
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _logger.info("Visualizer Gen: Bắt đầu sinh sóng nhạc '%s' (%d frames, %s FPS, %.1fs)...", style, total_frames, fps, duration)
 
     try:
         for f in range(total_frames):
+            if f > 0 and f % 300 == 0:
+                _logger.info("Visualizer Gen: Tiến độ %d/%d frames (%.1f%%)...", f, total_frames, (f / total_frames) * 100)
             img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
             t_idx = min(f, len(timeline) - 1)
@@ -1020,6 +1048,7 @@ def _generate_visualizer_overlay_video(
 
         proc.stdin.close()
         proc.wait()
+        _logger.info("Visualizer Gen: Hoàn tất sinh video sóng nhạc '%s' (%d frames) -> %s", style, total_frames, output_mov_path)
     except Exception as exc:
         _logger.warning("Error generating visualizer video: %s", exc)
         if proc and proc.stdin:
@@ -1178,6 +1207,7 @@ def generate_music_video(
             _logger.error("FFmpeg Music Video Gen failed: %s", result.stderr)
             raise RuntimeError(result.stderr[-2000:] if result.stderr else "FFmpeg Music Video Gen failed")
 
+        _logger.info("FFmpeg Music Video Gen hoàn tất thành công -> %s", output_path)
         return output_path
 
     finally:

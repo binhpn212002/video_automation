@@ -45,7 +45,7 @@
         <field name="model_id" ref="model_video_generate_job"/>
         <field name="state">code</field>
         <field name="code">model.cron_process_jobs(batch_size=1)</field>
-        <field name="interval_number">5</field>
+        <field name="interval_number">1</field>
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
     </record>

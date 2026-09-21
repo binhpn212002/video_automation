@@ -227,8 +227,16 @@ class VideoGenerateJob(models.Model):
         """Thực thi job render video (Affiliate hoặc Music Video)."""
         for job in self:
             if job.state == "completed":
+                _logger.info("Job %s đã hoàn thành trước đó, bỏ qua.", job.name)
                 continue
+            _logger.info(">>> [BẮT ĐẦU RENDER] Job: %s (Loại: %s) | ID: %s", job.name, job.job_type, job.id)
             job.write({"state": "processing", "error_message": False})
+            job_type_label = "Video Ca Nhạc" if job.job_type == "music_video" else "Video Affiliate Sản Phẩm"
+            job.message_post(
+                body=f"🚀 <b>Bắt đầu Render Video</b> ({job_type_label}). Hệ thống đang chuẩn bị tài nguyên và xử lý..."
+            )
+            # Commit ngay lập tức để trạng thái 'Đang render' và Chatter hiển thị ngay trên UI
+            self.env.cr.commit()
             try:
                 if job.job_type == "music_video":
                     video = job._run_music_video()
@@ -244,8 +252,9 @@ class VideoGenerateJob(models.Model):
                     }
                 )
                 job.message_post(
-                    body=f"Job hoàn thành: Đã tạo video <b>{video.name}</b> (CDN: <a href='{video.cdn_url}'>{video.cdn_url}</a>)"
+                    body=f"✅ <b>Job hoàn thành</b>: Đã tạo video <b>{video.name}</b> (Thời lượng: {video.duration:.1f}s | CDN: <a href='{video.cdn_url}' target='_blank'>{video.cdn_url}</a>)"
                 )
+                _logger.info("<<< [RENDER THÀNH CÔNG] Job: %s -> Video: %s (ID: %s)", job.name, video.name, video.id)
             except Exception as exc:
                 job.write(
                     {
@@ -254,7 +263,7 @@ class VideoGenerateJob(models.Model):
                         "finish_date": fields.Datetime.now(),
                     }
                 )
-                job.message_post(body=f"Job thất bại: {exc}")
+                job.message_post(body=f"❌ <b>Job thất bại</b>: {exc}")
                 _logger.exception("Video generate job %s failed: %s", job.name, exc)
         return True
 
@@ -336,14 +345,27 @@ class VideoGenerateJob(models.Model):
         output_local = os.path.join(work_dir, "output.mp4")
 
         try:
+            _logger.info("[%s] [1/4] Đang tải tài nguyên từ Cloudflare R2 (Background: %s, Character: %s, Audio: %s)...", self.name, bg.name, char.name, audio.name)
             bg_client.download_file(bg.storage_path, bg_local)
             char_client.download_file(char.storage_path, char_local)
             audio_client.download_file(audio.storage_path, audio_local)
+            _logger.info("[%s] Tải tài nguyên thành công. Workdir: %s", self.name, work_dir)
 
             effective_duration = (
                 self.max_duration
                 if (self.max_duration and self.max_duration > 0)
                 else (audio.duration or 0.0)
+            )
+
+            _logger.info(
+                "[%s] [2/4] Bắt đầu render FFmpeg (Layout: %s, Visualizer: %s - %s, Particle: %s, Preset: %s, Thời lượng: %.1fs)...",
+                self.name,
+                self.music_layout,
+                self.visualizer_style,
+                self.visualizer_color,
+                self.particle_effect,
+                self.music_preset,
+                effective_duration,
             )
 
             generate_music_video(
@@ -360,9 +382,13 @@ class VideoGenerateJob(models.Model):
                 max_duration=effective_duration,
             )
 
+            file_size_mb = round(os.path.getsize(output_local) / (1024 * 1024), 2)
+            _logger.info("[%s] [3/4] Render video xong (Dung lượng: %s MB). Đang tải lên Cloudflare R2...", self.name, file_size_mb)
+
             object_key = make_flat_object_key("m", ".mp4", record_id=video_rec.id)
             video_client.upload_file(output_local, object_key, content_type="video/mp4")
             meta = probe_media(output_local)
+            _logger.info("[%s] [4/4] Upload R2 hoàn tất -> Key: %s. Cập nhật bản ghi video...", self.name, object_key)
 
             video_rec.write(
                 {
@@ -380,6 +406,7 @@ class VideoGenerateJob(models.Model):
             )
             return video_rec
         except Exception:
+            _logger.exception("[%s] Lỗi trong quá trình render music video", self.name)
             video_rec.write({"state": "draft"})
             raise
         finally:
@@ -414,10 +441,21 @@ class VideoGenerateJob(models.Model):
             ("scheduled_date", "<=", now),
         ]
         jobs = self.search(domain, order="priority desc, scheduled_date asc, id asc", limit=batch_size)
-        _logger.info("Cron VA Video Generate Jobs: Found %d jobs to process.", len(jobs))
+        if jobs:
+            _logger.info(
+                "Cron VA Video Generate Jobs: Tìm thấy %d job đến hạn chạy (Hiện tại UTC: %s): %s",
+                len(jobs),
+                now,
+                ", ".join(f"{j.name} (Lịch: {j.scheduled_date})" for j in jobs),
+            )
+        else:
+            _logger.info(
+                "Cron VA Video Generate Jobs: Kiểm tra định kỳ (Hiện tại UTC: %s) - Chưa có job nào đến giờ cần chạy.",
+                now,
+            )
         for job in jobs:
             try:
-                _logger.info("Cron processing video generate job: %s (%s)", job.name, job.job_type)
+                _logger.info("Cron bắt đầu xử lý job: %s (Loại: %s | Lịch hẹn: %s)", job.name, job.job_type, job.scheduled_date)
                 job.action_run_job()
                 self.env.cr.commit()
             except Exception as e:
