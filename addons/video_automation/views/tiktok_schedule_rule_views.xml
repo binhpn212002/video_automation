@@ -20,6 +20,7 @@
                   decoration-warning="pool_status == 'warning'">
                 <field name="name"/>
                 <field name="tiktok_account_id"/>
+                <field name="upload_times_display"/>
                 <field name="slots_per_day"/>
                 <field name="pool_available_count"/>
                 <field name="pool_needed"/>
@@ -36,13 +37,21 @@
         <field name="arch" type="xml">
             <form>
                 <header>
-                    <button name="action_top_up_pool" type="object" string="Gen bù pool"
+                    <button name="action_generate_queue_today" type="object" string="Lên lịch hôm nay"
                             class="btn-primary"
+                            help="Tạo các slot hàng chờ cho ngày hôm nay theo khung giờ đã cấu hình"/>
+                    <button name="action_top_up_pool" type="object" string="Gen bù pool"
+                            class="btn-secondary"
                             help="Generate video mới từ raw cho đến ngưỡng buffer"/>
                     <field name="pool_status" widget="statusbar"
                             statusbar_visible="ok,warning,critical"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_queue" type="object" class="oe_stat_button" icon="fa-clock-o">
+                            <field name="queue_count" widget="statinfo" string="Hàng chờ"/>
+                        </button>
+                    </div>
                     <div class="alert alert-danger" role="alert"
                          invisible="pool_status != 'critical'">
                         Pool thiếu cho ngày mai: còn <field name="pool_available_count"/> video

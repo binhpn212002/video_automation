@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+<odoo noupdate="0">
     <record id="cron_auto_create_publish_queue" model="ir.cron">
         <field name="name">VA: Auto Create Publish Queue</field>
         <field name="model_id" ref="model_tiktok_publish_queue"/>
         <field name="state">code</field>
         <field name="code">model.cron_auto_create_queue()</field>
         <field name="interval_number">1</field>
-        <field name="interval_type">days</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 
@@ -17,6 +18,7 @@
         <field name="code">model.cron_publish_due()</field>
         <field name="interval_number">5</field>
         <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 
@@ -27,6 +29,7 @@
         <field name="code">model.cron_retry_failed()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 
@@ -37,6 +40,7 @@
         <field name="code">model.cron_refresh_tokens()</field>
         <field name="interval_number">1</field>
         <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 
@@ -47,6 +51,7 @@
         <field name="code">model.cron_process_jobs(batch_size=1)</field>
         <field name="interval_number">1</field>
         <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
         <field name="active" eval="True"/>
     </record>
 </odoo>

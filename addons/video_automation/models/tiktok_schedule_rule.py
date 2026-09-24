@@ -49,6 +49,25 @@ class TikTokScheduleRule(models.Model):
         ],
         compute="_compute_pool_stats",
     )
+    upload_times_display = fields.Char(
+        string="Khung giờ đăng",
+        compute="_compute_upload_times_display",
+    )
+    queue_count = fields.Integer(
+        string="Hàng chờ",
+        compute="_compute_queue_count",
+    )
+
+    @api.depends("upload_time_ids", "upload_time_ids.hour", "upload_time_ids.minute")
+    def _compute_upload_times_display(self):
+        for rule in self:
+            times = [t.name for t in sorted(rule.upload_time_ids, key=lambda r: (r.hour, r.minute)) if t.name]
+            rule.upload_times_display = ", ".join(times) or "Chưa cấu hình"
+
+    def _compute_queue_count(self):
+        Queue = self.env["tiktok.publish.queue"]
+        for rule in self:
+            rule.queue_count = Queue.search_count([("schedule_rule_id", "=", rule.id)])
 
     @api.depends(
         "upload_time_ids",
@@ -118,6 +137,55 @@ class TikTokScheduleRule(models.Model):
             if storage:
                 storage.action_top_up_pool()
         return True
+
+    def action_generate_queue_today(self):
+        Queue = self.env["tiktok.publish.queue"]
+        for rule in self:
+            Queue._create_queue_for_rule(rule)
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": "Lên lịch hôm nay",
+                "message": "Đã kiểm tra và cập nhật hàng chờ cho rule.",
+                "type": "success",
+                "sticky": False,
+            },
+        }
+
+    def action_view_queue(self):
+        self.ensure_one()
+        return {
+            "name": f"Hàng chờ - {self.name}",
+            "type": "ir.actions.act_window",
+            "res_model": "tiktok.publish.queue",
+            "view_mode": "tree,form",
+            "domain": [("schedule_rule_id", "=", self.id)],
+            "context": {
+                "default_schedule_rule_id": self.id,
+                "default_tiktok_account_id": self.tiktok_account_id.id,
+            },
+        }
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for rule in records.filtered(lambda r: r.active):
+            try:
+                self.env["tiktok.publish.queue"]._create_queue_for_rule(rule)
+            except Exception:
+                pass
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if vals.get("active") or "upload_time_ids" in vals:
+            for rule in self.filtered(lambda r: r.active):
+                try:
+                    self.env["tiktok.publish.queue"]._create_queue_for_rule(rule)
+                except Exception:
+                    pass
+        return res
 
 
 class TikTokScheduleRuleTime(models.Model):
